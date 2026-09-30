@@ -1,0 +1,6 @@
+CENTRAL FORENSIC SCIENCE LABORATORY (CFSL)
+Cyber & Hardware Forensics Division
+Item Examined: Digital Access Controller Model AC-900 (Recovered from Vault Entry)
+Findings: Hardware EEPROM was injected with custom payload via internal SPI bus. Microcontroller memory dumped successfully.
+Cryptographic evidence extracted: Attacker IP trace 192.0.2.89 routed through compromised proxy.
+Examiner: Dr. Priya Nambiar (Senior Scientific Officer, CFSL)

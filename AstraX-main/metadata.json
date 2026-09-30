@@ -1,0 +1,7 @@
+{
+  "name": "NCRB Secure Legal DMS",
+  "description": "Secure Digital Document Management System for Legal and Investigation Documents for NCRB Women Safety Division & Ministry of Home Affairs",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
