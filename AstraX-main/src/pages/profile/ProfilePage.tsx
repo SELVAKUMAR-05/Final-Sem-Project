@@ -63,7 +63,7 @@ export const ProfilePage: React.FC = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px' }}>
+      <div className="profile-layout-grid" style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '20px' }}>
         {/* Left ID Badge Card */}
         <div
           style={{

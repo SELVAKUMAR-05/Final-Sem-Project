@@ -108,7 +108,7 @@ export const Register: React.FC = () => {
   };
 
   return (
-    <div style={{
+    <div className="register-page" style={{
       minHeight: '100vh',
       display: 'flex',
       background: '#f8fafc',

@@ -47,7 +47,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
+  );
   const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState<boolean>(false);
   const [notificationsOpen, setNotificationsOpen] = useState<boolean>(false);
@@ -254,9 +256,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
   const navLinks = getNavLinks();
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+    <div className="app-shell" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
       {/* TOP NAVIGATION BAR */}
-      <header style={{
+      <header className="app-topbar" style={{
         height: '64px',
         background: '#07162c',
         borderBottom: '1px solid #1e293b',
@@ -271,7 +273,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
         boxShadow: '0 2px 10px rgba(0, 0, 0, 0.15)'
       }}>
         {/* Left: Brand Logo & Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div className="app-brand-toggle" style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             style={{
@@ -294,6 +296,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
 
           <Link
             to="/dashboard"
+            className="app-brand-link"
             style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', color: 'inherit' }}
           >
             <img
@@ -313,7 +316,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
         </div>
 
         {/* Center: Live Global Search Bar */}
-        <div ref={searchRef} style={{ position: 'relative', width: '380px' }}>
+        <div ref={searchRef} className="app-global-search" style={{ position: 'relative', width: '380px' }}>
           <div style={{ position: 'relative' }}>
             <input
               type="text"
@@ -530,10 +533,11 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
         </div>
 
         {/* Right: Notifications, Quick Role Switcher, Profile */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div className="app-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           {/* Quick Demo Role Switcher for Hackathon Evaluation */}
           <div style={{ position: 'relative' }}>
             <button
+              className="app-role-switcher"
               onClick={() => setRoleSwitcherOpen(!roleSwitcherOpen)}
               style={{
                 display: 'flex',
@@ -764,6 +768,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
           {/* User Profile Avatar & Dropdown */}
           <div ref={profileRef} style={{ position: 'relative' }}>
             <button
+              className="app-profile-trigger"
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
               style={{
                 display: 'flex',
@@ -930,8 +935,16 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
 
       {/* MAIN BODY LAYOUT: SIDEBAR + CONTENT */}
       <div style={{ display: 'flex', flex: 1, minHeight: 'calc(100vh - 64px)' }}>
+        {!sidebarCollapsed && (
+          <button
+            type="button"
+            className="mobile-sidebar-backdrop"
+            aria-label="Close navigation menu"
+            onClick={() => setSidebarCollapsed(true)}
+          />
+        )}
         {/* COLLAPSIBLE SIDEBAR */}
-        <aside style={{
+        <aside className={`app-sidebar${sidebarCollapsed ? ' is-collapsed' : ''}`} style={{
           width: sidebarCollapsed ? '72px' : '260px',
           background: '#07162c',
           borderRight: '1px solid #1e293b',
@@ -969,6 +982,9 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
                 <Link
                   key={linkItem.to}
                   to={linkItem.to}
+                  onClick={() => {
+                    if (window.matchMedia('(max-width: 760px)').matches) setSidebarCollapsed(true);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -1088,7 +1104,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <main style={{
+        <main className="app-main" style={{
           flex: 1,
           padding: '28px 36px',
           overflowY: 'auto',
@@ -1100,7 +1116,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
       </div>
 
       {/* LIVE TELEMETRY / SECTION 65B STATUS BAR */}
-      <footer style={{
+      <footer className="app-status-footer" style={{
         height: '32px',
         background: '#07162c',
         borderTop: '1px solid #1e293b',
