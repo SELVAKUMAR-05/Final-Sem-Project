@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.tsx';
-import { ShieldCheck, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export const ForgotPassword: React.FC = () => {
   const { forgotPassword } = useAuth();
@@ -54,14 +54,14 @@ export const ForgotPassword: React.FC = () => {
           <div style={{
             width: '48px',
             height: '48px',
-            background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+            background: '#07162c',
             borderRadius: '12px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 16px'
           }}>
-            <ShieldCheck size={26} color="#ffffff" />
+            <img src="/astrax-logo.png" alt="AstraX Evidence Wallet" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '12px' }} />
           </div>
           <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
             Forgot your password?

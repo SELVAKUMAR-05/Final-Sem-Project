@@ -3,7 +3,6 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth, DEMO_CREDENTIALS } from '../../context/AuthContext.tsx';
 import { UserRole } from '../../types.ts';
 import {
-  ShieldCheck,
   Lock,
   User,
   Eye,
@@ -81,7 +80,7 @@ export const Login: React.FC = () => {
       background: '#f8fafc',
       fontFamily: "'Public Sans', -apple-system, BlinkMacSystemFont, sans-serif"
     }}>
-      {/* LEFT SIDE: Government & Security Branding */}
+      {/* LEFT SIDE: AstraX branding */}
       <div style={{
         flex: '1 1 52%',
         background: 'linear-gradient(145deg, #07162c 0%, #0b2545 60%, #133b68 100%)',
@@ -110,24 +109,17 @@ export const Login: React.FC = () => {
         {/* Top Header Logo */}
         <div style={{ position: 'relative', zIndex: 2 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '8px' }}>
-            <div style={{
-              width: '44px',
-              height: '44px',
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
-              borderRadius: '10px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 8px 20px -4px rgba(59, 130, 246, 0.4)'
-            }}>
-              <ShieldCheck size={26} color="#ffffff" />
-            </div>
+            <img
+              src="/astrax-logo.png"
+              alt="AstraX Evidence Wallet"
+              style={{ width: '56px', height: '56px', objectFit: 'cover', borderRadius: '12px', boxShadow: '0 8px 20px -4px rgba(59, 130, 246, 0.4)' }}
+            />
             <div>
-              <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '1.8px', color: '#93c5fd', textTransform: 'uppercase' }}>
-                MINISTRY OF HOME AFFAIRS &bull; GOVT OF INDIA
+              <div style={{ fontSize: '22px', fontWeight: 900, letterSpacing: '-0.3px', color: '#ffffff' }}>
+                AstraX
               </div>
-              <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.3px', color: '#ffffff' }}>
-                NCRB SECURE EVIDENCE VAULT
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#93c5fd' }}>
+                Evidence Wallet
               </div>
             </div>
           </div>
@@ -264,8 +256,8 @@ export const Login: React.FC = () => {
           fontSize: '12px',
           color: '#64748b'
         }}>
-          <div>Authorized National Security System &bull; Information Technology Act 2000</div>
-          <div>Node ID: NCRB-HQ-DEL-SEC-01</div>
+          <div>Secure Evidence &amp; Legal Document Management</div>
+          <div>Powered by AstraX</div>
         </div>
       </div>
 

@@ -5,7 +5,6 @@ import { UserRole, Notification, Case, LegalDocument, Evidence } from '../../typ
 import { api } from '../../services/api.ts';
 import { AIAssistant } from '../AIAssistant.tsx';
 import {
-  ShieldCheck,
   LayoutDashboard,
   FolderLock,
   FileText,
@@ -297,24 +296,17 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
             to="/dashboard"
             style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', color: 'inherit' }}
           >
-            <div style={{
-              width: '36px',
-              height: '36px',
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)'
-            }}>
-              <ShieldCheck size={22} color="#ffffff" />
-            </div>
+            <img
+              src="/astrax-logo.png"
+              alt="AstraX Evidence Wallet"
+              style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '8px' }}
+            />
             <div>
-              <div style={{ fontSize: '9px', fontWeight: 800, letterSpacing: '1.4px', color: '#93c5fd', textTransform: 'uppercase' }}>
-                MINISTRY OF HOME AFFAIRS
-              </div>
               <div style={{ fontSize: '15px', fontWeight: 900, letterSpacing: '-0.3px', color: '#ffffff' }}>
-                NCRB EVIDENCE VAULT
+                AstraX
+              </div>
+              <div style={{ fontSize: '10px', fontWeight: 600, color: '#93c5fd' }}>
+                Evidence Wallet
               </div>
             </div>
           </Link>

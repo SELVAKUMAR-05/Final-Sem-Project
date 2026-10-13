@@ -1,4 +1,4 @@
-# Secure Digital Document Management System for Legal & Investigation Documents
+# AstraX — Secure Evidence & Legal Document Management
 ### Organization: Ministry of Home Affairs (MHA), Government of India
 ### Department: National Crime Records Bureau (NCRB), Women Safety Division
 ### Category: Software | Theme: Miscellaneous
@@ -15,7 +15,7 @@ Current legal and investigation document workflows across police departments, fo
 - Significant delays in trial proceedings due to slow document retrieval.
 
 ## 2. Proposed Solution
-NCRB Secure Legal DMS is a full-stack, enterprise-grade, cryptographically fortified document management platform. It delivers:
+AstraX Evidence Wallet is a full-stack, enterprise-grade, cryptographically fortified document management platform. It delivers:
 - **Confidentiality:** Role-Based Access Control (RBAC) preventing unauthorized access (e.g. defense counsel viewing unfiled internal police drafts).
 - **Integrity:** Automated SHA-256 document hashing on upload with instantaneous disk-level verification and tamper alerts.
 - **Authenticity:** PKI digital signature workflow for police officers, investigators, and court registrars.

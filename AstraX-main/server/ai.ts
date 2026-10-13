@@ -250,7 +250,7 @@ export class AIService {
     const headers: Record<string, string> = {
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
-      'X-Title': 'NCRB Secure Legal DMS',
+      'X-Title': 'AstraX',
     };
     if (process.env.APP_URL) headers['HTTP-Referer'] = process.env.APP_URL;
 

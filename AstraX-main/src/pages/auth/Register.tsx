@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { UserRole } from '../../types.ts';
 import {
-  ShieldCheck,
   User,
   Mail,
   Building,
@@ -132,20 +131,20 @@ export const Register: React.FC = () => {
             <div style={{
               width: '44px',
               height: '44px',
-              background: 'linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%)',
+              background: '#07162c',
               borderRadius: '10px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
             }}>
-              <ShieldCheck size={26} color="#ffffff" />
+              <img src="/astrax-logo.png" alt="AstraX Evidence Wallet" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '10px' }} />
             </div>
             <div>
               <div style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '1.8px', color: '#93c5fd', textTransform: 'uppercase' }}>
                 MINISTRY OF HOME AFFAIRS &bull; GOVT OF INDIA
               </div>
               <div style={{ fontSize: '18px', fontWeight: 900, letterSpacing: '-0.3px', color: '#ffffff' }}>
-                NCRB SECURE EVIDENCE VAULT
+                AstraX Evidence Wallet
               </div>
             </div>
           </div>

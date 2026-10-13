@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { UserRole, Notification } from '../types.ts';
 import { api } from '../services/api.ts';
-import { ShieldCheck, Lock, UserCircle, LogOut, KeyRound, AlertTriangle, Bell, CheckCircle2, Search } from 'lucide-react';
+import { Lock, UserCircle, LogOut, KeyRound, AlertTriangle, Bell, CheckCircle2, Search } from 'lucide-react';
 
 interface HeaderProps {
   onOpenLogin: () => void;
@@ -61,15 +61,15 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onNavigate }) => {
       <div className="header-inner">
         {/* Brand Section */}
         <div className="brand-section">
-          <div className="emblem-badge" title="National Crime Records Bureau">
-            <ShieldCheck size={26} color="#ffffff" />
+          <div className="emblem-badge" title="AstraX Evidence Wallet" style={{ overflow: 'hidden', padding: 0 }}>
+            <img src="/astrax-logo.png" alt="AstraX" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
           </div>
           <div className="brand-text">
             <h1>
-              Secure Digital Evidence & Legal Document Platform
+              AstraX Evidence Wallet
               <span className="pki-tag">PKI &bull; SHA-256</span>
             </h1>
-            <p>National Crime Records Bureau &bull; Ministry of Home Affairs &bull; Section 65B Certified</p>
+            <p>Secure Evidence &amp; Legal Document Management</p>
           </div>
         </div>
 

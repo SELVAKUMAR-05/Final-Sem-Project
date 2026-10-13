@@ -143,7 +143,7 @@ function getProfilePhotoExtension(file: Express.Multer.File): string | null {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', service: 'NCRB Secure Legal DMS', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', service: 'AstraX', timestamp: new Date().toISOString() });
 });
 
 // Authentication Middleware
