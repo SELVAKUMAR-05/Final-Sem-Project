@@ -74,10 +74,15 @@ Use the built-in **"Hackathon Demo Guide"** tab in the application, or test via 
 # 1. Install dependencies
 npm install
 
-# 2. Run the full-stack development server (Express + Vite on Port 3000)
+# 2. Optional: configure OpenRouter for open-ended AI answers
+#    Copy .env.example to .env and set OPENROUTER_API_KEY.
+
+# 3. Run the full-stack development server (Express + Vite on Port 3000)
 npm run dev
 ```
 Open browser at `http://localhost:3000`.
+
+Without `OPENROUTER_API_KEY`, the assistant uses its limited local vault analyzer and cannot answer general questions. `OPENROUTER_MODEL` is optional and defaults to `openrouter/free`.
 
 ### Running with Docker Compose
 ```bash

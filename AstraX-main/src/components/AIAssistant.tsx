@@ -5,7 +5,7 @@ import { Sparkles, X, Send, Bot, User as UserIcon, RefreshCw } from 'lucide-reac
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
-  source?: 'gemini' | 'local';
+  source?: 'openrouter' | 'local';
 }
 
 const SUGGESTIONS = [
@@ -179,7 +179,7 @@ export const AIAssistant: React.FC = () => {
               <div>
                 <div style={{ fontSize: '14px', fontWeight: 800 }}>NyayaSahayak AI</div>
                 <div style={{ fontSize: '10px', color: '#93c5fd' }}>
-                  Case Summarization & Cross-Case Pattern Analysis
+                  Vault records & general questions
                 </div>
               </div>
             </div>
@@ -217,7 +217,7 @@ export const AIAssistant: React.FC = () => {
             {showSuggestions && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px' }}>
-                  Ask me to summarize a case or find patterns across the vault:
+                  Ask about accessible case records, documents, or anything else:
                 </div>
                 {SUGGESTIONS.map((s) => (
                   <button
@@ -291,10 +291,10 @@ export const AIAssistant: React.FC = () => {
                         fontSize: '9px',
                         fontWeight: 700,
                         letterSpacing: '0.5px',
-                        color: m.source === 'gemini' ? '#7c3aed' : '#64748b',
+                        color: m.source === 'openrouter' ? '#7c3aed' : '#64748b',
                       }}
                     >
-                      {m.source === 'gemini' ? 'GEMINI AI' : 'LOCAL ANALYTIC ENGINE'} &bull; VERIFY BEFORE USE
+                      {m.source === 'openrouter' ? 'OPENROUTER AI' : 'LOCAL ANALYTIC ENGINE'} &bull; VERIFY BEFORE USE
                     </div>
                   )}
                 </div>
@@ -342,7 +342,7 @@ export const AIAssistant: React.FC = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="e.g. Summarize CASE-2026-001 or find patterns across all cases"
+              placeholder="Ask about a case, a document, or a general question"
               style={{
                 flex: 1,
                 padding: '9px 12px',

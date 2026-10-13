@@ -252,7 +252,7 @@ export const api = {
     return request(`/api/documents/${docId}/ai-summary`, { method: 'POST' });
   },
 
-  async askAssistant(message: string, history: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<{ reply: string; source: 'gemini' | 'local' }> {
+  async askAssistant(message: string, history: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<{ reply: string; source: 'openrouter' | 'local' }> {
     return request('/api/ai/assistant', {
       method: 'POST',
       body: JSON.stringify({ message, history }),
