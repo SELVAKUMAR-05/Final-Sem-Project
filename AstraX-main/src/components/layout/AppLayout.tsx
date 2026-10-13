@@ -44,7 +44,7 @@ interface AppLayoutProps {
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModal }) => {
-  const { currentUser, logout, switchRoleShortcut } = useAuth();
+  const { currentUser, profilePhotoUrl, logout, switchRoleShortcut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -794,9 +794,18 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 800,
-                fontSize: '13px'
+                fontSize: '13px',
+                overflow: 'hidden'
               }}>
-                {currentUser?.fullName.charAt(0) || 'U'}
+                {profilePhotoUrl ? (
+                  <img
+                    src={profilePhotoUrl}
+                    alt=""
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  currentUser?.fullName.charAt(0) || 'U'
+                )}
               </div>
               <div style={{ textAlign: 'left', lineHeight: 1.2 }}>
                 <div style={{ fontSize: '12px', fontWeight: 700, whiteSpace: 'nowrap' }}>

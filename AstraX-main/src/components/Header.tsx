@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onNavigate }) => {
-  const { currentUser, logout, switchRoleShortcut, unauthorizedAlert, setUnauthorizedAlert } = useAuth();
+  const { currentUser, profilePhotoUrl, logout, switchRoleShortcut, unauthorizedAlert, setUnauthorizedAlert } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -181,7 +181,17 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onNavigate }) => {
 
               {/* User Profile Info */}
               <div className="user-profile-widget">
-                <div className="user-avatar">{currentUser.fullName.charAt(0)}</div>
+                <div className="user-avatar" style={{ overflow: 'hidden' }}>
+                  {profilePhotoUrl ? (
+                    <img
+                      src={profilePhotoUrl}
+                      alt=""
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    currentUser.fullName.charAt(0)
+                  )}
+                </div>
                 <div className="user-info">
                   <span className="name">{currentUser.fullName}</span>
                   <span className="role-pill">{currentUser.role.replace('_', ' ')}</span>

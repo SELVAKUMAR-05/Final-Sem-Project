@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Request, Response, NextFunction } from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import cors from 'cors';
 import multer from 'multer';
 import { createServer as createViteServer } from 'vite';
@@ -9,6 +10,8 @@ import { createServer as createViteServer } from 'vite';
 import {
   initDatabase,
   getDb,
+  getUserProfilePhotoFile,
+  setUserProfilePhotoFile,
   findUserByUsernameOrEmail,
   findUserById,
   getUserPasswordHash,
@@ -95,6 +98,48 @@ const upload = multer({
     }
   },
 });
+
+const profilePhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedTypes: Record<string, string> = {
+      '.jpg': 'image/jpeg',
+      '.jpeg': 'image/jpeg',
+      '.png': 'image/png',
+      '.webp': 'image/webp',
+    };
+    const extension = path.extname(file.originalname).toLowerCase();
+
+    if (allowedTypes[extension] !== file.mimetype) {
+      cb(new Error('Profile photos must be JPEG, PNG, or WebP images.'));
+      return;
+    }
+
+    cb(null, true);
+  },
+});
+
+function getProfilePhotoExtension(file: Express.Multer.File): string | null {
+  const bytes = file.buffer;
+  if (file.mimetype === 'image/jpeg' && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return '.jpg';
+  }
+  if (
+    file.mimetype === 'image/png' &&
+    bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
+    return '.png';
+  }
+  if (
+    file.mimetype === 'image/webp' &&
+    bytes.toString('ascii', 0, 4) === 'RIFF' &&
+    bytes.toString('ascii', 8, 12) === 'WEBP'
+  ) {
+    return '.webp';
+  }
+  return null;
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -217,6 +262,89 @@ app.get('/api/auth/me', authenticateJwt, (req: AuthenticatedRequest, res: Respon
   }
   return res.json(user);
 });
+
+app.get('/api/auth/me/photo', authenticateJwt, (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const filename = getUserProfilePhotoFile(req.user!.userId);
+  if (!filename) {
+    return res.status(204).end();
+  }
+
+  const photoPath = path.join(STORAGE_DIR, 'profile-photos', filename);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.sendFile(photoPath, (err) => {
+    if (!err) return;
+    if (res.headersSent) return next(err);
+    console.error('Failed to read stored profile photo:', err);
+    const status = (err as NodeJS.ErrnoException).code === 'ENOENT' ? 404 : 500;
+    res.status(status).json({
+      status,
+      message: 'Unable to load the stored profile photo.',
+    });
+  });
+});
+
+app.put(
+  '/api/auth/me/photo',
+  authenticateJwt,
+  (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    profilePhotoUpload.single('photo')(req, res, (err) => {
+      if (!err) return next();
+      const isTooLarge = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE';
+      return res.status(isTooLarge ? 413 : 400).json({
+        status: isTooLarge ? 413 : 400,
+        message: isTooLarge ? 'Profile photos must be 5 MB or smaller.' : err.message,
+      });
+    });
+  },
+  (req: AuthenticatedRequest, res: Response) => {
+    const photo = req.file;
+    if (!photo) {
+      return res.status(400).json({ status: 400, message: 'Choose a JPEG, PNG, or WebP photo to upload.' });
+    }
+
+    const extension = getProfilePhotoExtension(photo);
+    if (!extension) {
+      return res.status(400).json({ status: 400, message: 'The uploaded file is not a valid JPEG, PNG, or WebP image.' });
+    }
+
+    const user = findUserById(req.user!.userId);
+    if (!user) {
+      return res.status(404).json({ status: 404, message: 'User not found.' });
+    }
+
+    const photoDirectory = path.join(STORAGE_DIR, 'profile-photos');
+    fs.mkdirSync(photoDirectory, { recursive: true });
+    const filename = `${randomUUID()}${extension}`;
+    const photoPath = path.join(photoDirectory, filename);
+    const previousFilename = getUserProfilePhotoFile(user.id);
+
+    try {
+      fs.writeFileSync(photoPath, photo.buffer, { flag: 'wx' });
+      setUserProfilePhotoFile(user.id, filename);
+    } catch (err) {
+      if (fs.existsSync(photoPath)) fs.unlinkSync(photoPath);
+      console.error('Failed to save uploaded profile photo:', err);
+      return res.status(500).json({ status: 500, message: 'Unable to save the profile photo.' });
+    }
+
+    if (previousFilename) {
+      const previousPath = path.join(photoDirectory, previousFilename);
+      if (fs.existsSync(previousPath)) fs.unlinkSync(previousPath);
+    }
+
+    addAuditLog({
+      userId: user.id,
+      username: user.username,
+      role: user.role,
+      action: 'PROFILE_PHOTO_UPDATED',
+      ipAddress: req.ip || req.socket.remoteAddress || '127.0.0.1',
+      description: 'User uploaded a profile photo.',
+      status: 'SUCCESS',
+    });
+
+    return res.json({ status: 200, message: 'Profile photo updated successfully.' });
+  }
+);
 
 // POST /api/auth/register
 app.post('/api/auth/register', (req: Request, res: Response) => {

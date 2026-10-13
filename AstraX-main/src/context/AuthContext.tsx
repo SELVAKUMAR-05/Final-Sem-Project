@@ -4,6 +4,7 @@ import { api, getStoredToken, setStoredToken } from '../services/api.ts';
 
 export interface AuthContextType {
   currentUser: User | null;
+  profilePhotoUrl: string | null;
   token: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -19,6 +20,7 @@ export interface AuthContextType {
   forgotPassword: (email: string) => Promise<{ status: number; message: string }>;
   logout: () => void;
   switchRoleShortcut: (role: UserRole) => Promise<void>;
+  uploadProfilePhoto: (photo: File) => Promise<void>;
   unauthorizedAlert: string | null;
   setUnauthorizedAlert: (msg: string | null) => void;
 }
@@ -68,6 +70,8 @@ export const DEMO_CREDENTIALS: Record<UserRole, { username: string; pass: string
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(getStoredToken());
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  const [profilePhotoVersion, setProfilePhotoVersion] = useState(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [unauthorizedAlert, setUnauthorizedAlert] = useState<string | null>(null);
 
@@ -93,6 +97,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     verifyExistingSession();
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    setProfilePhotoUrl(null);
+
+    if (!currentUser) {
+      return () => {
+        active = false;
+      };
+    }
+
+    api.getProfilePhoto()
+      .then((photo) => {
+        if (!active || !photo) return;
+        objectUrl = URL.createObjectURL(photo);
+        setProfilePhotoUrl(objectUrl);
+      })
+      .catch((error) => {
+        if (active) console.error('Failed to load profile photo:', error);
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [currentUser?.id, profilePhotoVersion]);
+
+  const uploadProfilePhoto = async (photo: File) => {
+    await api.uploadProfilePhoto(photo);
+    setProfilePhotoVersion((version) => version + 1);
+  };
 
   const login = async (username: string, password: string): Promise<User> => {
     setIsLoading(true);
@@ -148,6 +184,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         currentUser,
+        profilePhotoUrl,
         token,
         isLoading,
         isAuthenticated: Boolean(currentUser && token),
@@ -156,6 +193,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         forgotPassword,
         logout,
         switchRoleShortcut,
+        uploadProfilePhoto,
         unauthorizedAlert,
         setUnauthorizedAlert,
       }}

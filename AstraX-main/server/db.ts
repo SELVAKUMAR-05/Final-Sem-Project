@@ -37,6 +37,7 @@ export interface AppDatabase {
   securityAlerts: SecurityAlert[];
   notifications: Notification[];
   aiMetadataStore: Map<number, AIDocumentMetadata>;
+  profilePhotoFiles: Map<number, string>;
 }
 
 const db: AppDatabase = {
@@ -52,6 +53,7 @@ const db: AppDatabase = {
   securityAlerts: [],
   notifications: [],
   aiMetadataStore: new Map(),
+  profilePhotoFiles: new Map(),
 };
 
 let nextUserId = 1;
@@ -69,6 +71,32 @@ export function getDb(): AppDatabase {
   return db;
 }
 
+export function getUserProfilePhotoFile(userId: number): string | undefined {
+  return db.profilePhotoFiles.get(userId);
+}
+
+export function setUserProfilePhotoFile(userId: number, filename: string | null): void {
+  const photoDirectory = path.join(STORAGE_DIR, 'profile-photos');
+  const manifestPath = path.join(photoDirectory, 'manifest.json');
+  const nextFiles = new Map(db.profilePhotoFiles);
+
+  if (filename) {
+    nextFiles.set(userId, filename);
+  } else {
+    nextFiles.delete(userId);
+  }
+
+  fs.mkdirSync(photoDirectory, { recursive: true });
+  const temporaryManifestPath = `${manifestPath}.tmp`;
+  fs.writeFileSync(
+    temporaryManifestPath,
+    JSON.stringify(Object.fromEntries(nextFiles), null, 2),
+    'utf-8'
+  );
+  fs.renameSync(temporaryManifestPath, manifestPath);
+  db.profilePhotoFiles = nextFiles;
+}
+
 // Initialize seed data and files
 export function initDatabase() {
   if (db.users.length > 0) return; // already initialized
@@ -76,6 +104,21 @@ export function initDatabase() {
   // Ensure storage folder
   if (!fs.existsSync(STORAGE_DIR)) {
     fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  }
+
+  const profilePhotoManifestPath = path.join(STORAGE_DIR, 'profile-photos', 'manifest.json');
+  if (fs.existsSync(profilePhotoManifestPath)) {
+    const manifest = JSON.parse(fs.readFileSync(profilePhotoManifestPath, 'utf-8')) as Record<string, string>;
+    for (const [userId, filename] of Object.entries(manifest)) {
+      if (
+        /^\d+$/.test(userId) &&
+        typeof filename === 'string' &&
+        path.basename(filename) === filename &&
+        /^[0-9a-f-]+\.(?:png|jpe?g|webp)$/i.test(filename)
+      ) {
+        db.profilePhotoFiles.set(Number(userId), filename);
+      }
+    }
   }
 
   // 1. Seed Users (6 authentic personas)

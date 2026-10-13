@@ -118,6 +118,34 @@ export const api = {
     return request<User>('/api/auth/me');
   },
 
+  async getProfilePhoto(): Promise<Blob | null> {
+    const token = getStoredToken();
+    const response = await fetch('/api/auth/me/photo', {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+
+    if (response.status === 204) return null;
+    if (!response.ok) {
+      throw new Error(`Unable to load profile photo (HTTP ${response.status}).`);
+    }
+
+    const contentType = response.headers.get('Content-Type')?.split(';')[0];
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType || '')) {
+      throw new Error('The server returned an invalid profile photo response.');
+    }
+
+    return response.blob();
+  },
+
+  async uploadProfilePhoto(photo: File): Promise<{ status: number; message: string }> {
+    const formData = new FormData();
+    formData.append('photo', photo);
+    return request<{ status: number; message: string }>('/api/auth/me/photo', {
+      method: 'PUT',
+      body: formData,
+    });
+  },
+
   // Users
   async getUsers(): Promise<User[]> {
     return request<User[]>('/api/users');

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs.tsx';
+import { useToast } from '../../components/common/Toast.tsx';
 import {
   User,
   ShieldCheck,
@@ -10,11 +11,42 @@ import {
   Mail,
   Award,
   CheckCircle2,
-  Calendar
+  Calendar,
+  Camera
 } from 'lucide-react';
 
 export const ProfilePage: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, profilePhotoUrl, uploadProfilePhoto } = useAuth();
+  const { showToast } = useToast();
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+
+  const handlePhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const photo = event.target.files?.[0];
+    event.target.value = '';
+    if (!photo) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(photo.type)) {
+      showToast('Choose a JPEG, PNG, or WebP image.', 'error');
+      return;
+    }
+    if (photo.size > 5 * 1024 * 1024) {
+      showToast('Profile photos must be 5 MB or smaller.', 'error');
+      return;
+    }
+
+    try {
+      setIsUploadingPhoto(true);
+      await uploadProfilePhoto(photo);
+      showToast('Profile photo updated successfully.', 'success');
+    } catch (error) {
+      console.error('Failed to upload profile photo:', error);
+      showToast(error instanceof Error ? error.message : 'Unable to update profile photo.', 'error');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   return (
     <div>
@@ -59,7 +91,37 @@ export const ProfilePage: React.FC = () => {
               border: '2px solid #bfdbfe'
             }}
           >
-            {currentUser?.fullName?.charAt(0) || 'O'}
+            {profilePhotoUrl ? (
+              <img
+                src={profilePhotoUrl}
+                alt={`${currentUser?.fullName || 'Officer'} profile`}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
+              />
+            ) : (
+              currentUser?.fullName?.charAt(0) || 'O'
+            )}
+          </div>
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handlePhotoSelected}
+            style={{ display: 'none' }}
+            aria-label="Choose profile photo"
+          />
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={isUploadingPhoto}
+            style={{ marginBottom: '14px' }}
+          >
+            <Camera size={14} />
+            {isUploadingPhoto ? 'Uploading photo...' : profilePhotoUrl ? 'Change photo' : 'Upload photo'}
+          </button>
+          <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '16px' }}>
+            JPEG, PNG, or WebP · up to 5 MB
           </div>
 
           <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
