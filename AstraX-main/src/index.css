@@ -573,6 +573,89 @@ body {
   font-size: 15px;
 }
 
+/* Legacy operational views use the btn-gov class names. Keep them aligned
+   with the shared application button system. */
+.btn-gov {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-gov:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-gov:focus-visible {
+  outline: 3px solid rgba(59, 130, 246, 0.4);
+  outline-offset: 2px;
+}
+
+.btn-gov-blue,
+.btn-gov-primary {
+  background-color: var(--gov-blue);
+  color: #ffffff;
+  border-color: var(--gov-blue);
+}
+
+.btn-gov-blue:hover:not(:disabled),
+.btn-gov-primary:hover:not(:disabled) {
+  background-color: var(--gov-blue-hover);
+  border-color: var(--gov-blue-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-gov-outline {
+  background-color: #ffffff;
+  color: var(--gov-blue);
+  border-color: var(--gov-border-strong);
+}
+
+.btn-gov-outline:hover:not(:disabled) {
+  background-color: var(--gov-blue-light);
+  border-color: var(--gov-blue);
+}
+
+.btn-gov-danger {
+  background-color: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+.btn-gov-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+.btn-gov-success {
+  background-color: #16a34a;
+  color: #ffffff;
+  border-color: #16a34a;
+}
+
+.btn-gov-success:hover:not(:disabled) {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-gov-sm {
+  min-height: 28px;
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
 /* --------------------------------------------------------------------------
    STRICT COMPLIANCE SECURITY BADGES
    🟢 VALID, 🔴 TAMPERED, 🔵 ENCRYPTED, 🟣 SIGNED, 🟠 UNDER REVIEW
@@ -1047,5 +1130,122 @@ body {
   }
   .main-content {
     padding: 16px;
+  }
+}
+
+@page case-report {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+@media print {
+  body.printing-case-report,
+  body.printing-case-report #root {
+    min-height: 0 !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-case-report #root > div {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-case-report header,
+  body.printing-case-report aside,
+  body.printing-case-report footer,
+  body.printing-case-report #case-report-view > .page-header,
+  body.printing-case-report #case-report-view > button {
+    display: none !important;
+  }
+
+  body.printing-case-report main {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-case-report #case-report-view {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #0f172a !important;
+    font-family: Arial, Helvetica, sans-serif !important;
+    font-size: 9pt !important;
+  }
+
+  body.printing-case-report #case-report-document {
+    page: case-report;
+    width: 100% !important;
+    max-width: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+  }
+
+  body.printing-case-report #case-report-document * {
+    box-sizing: border-box !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.printing-case-report #case-report-document h2 {
+    font-size: 15pt !important;
+  }
+
+  body.printing-case-report #case-report-document h3 {
+    font-size: 11pt !important;
+  }
+
+  body.printing-case-report #case-report-document h4 {
+    font-size: 9pt !important;
+    break-after: avoid-page;
+    page-break-after: avoid;
+  }
+
+  body.printing-case-report #case-report-document .gov-table-container {
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+    break-inside: auto;
+  }
+
+  body.printing-case-report #case-report-document .gov-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    font-size: 7pt !important;
+  }
+
+  body.printing-case-report #case-report-document .gov-table th,
+  body.printing-case-report #case-report-document .gov-table td {
+    padding: 4px !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-word !important;
+  }
+
+  body.printing-case-report #case-report-document .gov-table thead {
+    display: table-header-group;
+  }
+
+  body.printing-case-report #case-report-document .gov-table tr {
+    break-inside: avoid-page;
+    page-break-inside: avoid;
+  }
+
+  body.printing-case-report #case-report-document .mono-hash {
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: break-all !important;
   }
 }

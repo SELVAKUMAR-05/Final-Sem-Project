@@ -46,6 +46,20 @@ export const CaseReportView: React.FC = () => {
     if (selectedCaseId) loadReport(selectedCaseId);
   }, [selectedCaseId]);
 
+  useEffect(() => {
+    const preparePrint = () => document.body.classList.add('printing-case-report');
+    const finishPrint = () => document.body.classList.remove('printing-case-report');
+
+    window.addEventListener('beforeprint', preparePrint);
+    window.addEventListener('afterprint', finishPrint);
+
+    return () => {
+      window.removeEventListener('beforeprint', preparePrint);
+      window.removeEventListener('afterprint', finishPrint);
+      finishPrint();
+    };
+  }, []);
+
   const handlePrint = () => {
     window.print();
   };
@@ -92,6 +106,7 @@ export const CaseReportView: React.FC = () => {
       {reportData && (
         <div
           className="gov-card"
+          id="case-report-document"
           style={{
             background: '#ffffff',
             padding: '40px',

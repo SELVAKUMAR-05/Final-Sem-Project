@@ -86,36 +86,47 @@ export const IntegrityLab: React.FC<IntegrityLabProps> = ({ initialDocument }) =
   };
 
   return (
-    <div className="integrity-lab-view" id="ncrb-integrity-lab">
-      {/* Header */}
-      <div style={{ marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '22px', fontWeight: 800, color: 'var(--gov-navy-950)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <ShieldCheck size={26} color="var(--gov-blue-600)" />
+    <div id="ncrb-integrity-lab" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      <div style={{ marginBottom: '8px' }}>
+        <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+          <ShieldCheck size={24} color="#1d4ed8" />
           SHA-256 Cryptographic Integrity &amp; Tamper Detection Lab
         </h2>
-        <p style={{ color: 'var(--gov-text-secondary)', fontSize: '13.5px', marginTop: '4px' }}>
-          Section 65B Digital Evidence Verification Engine &bull; Nonce-Proof Bitstream Audit (DEMO 7 &amp; Hackathon Suite)
+        <p style={{ color: '#64748b', fontSize: '13px', marginTop: '6px', marginBottom: 0 }}>
+          Section 65B digital evidence verification engine &bull; cryptographic audit trail monitoring
         </p>
       </div>
 
-      {/* Control Card */}
-      <div className="gov-card">
+      <div className="gov-card" style={{ borderRadius: '16px' }}>
         <div className="gov-card-header">
-          <span className="gov-card-title">
-            <Cpu size={18} /> Select Evidence Document for Cryptographic Audit
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#0f172a' }}>
+            <Cpu size={17} color="#1d4ed8" />
+            Select evidence document for cryptographic audit
           </span>
-          <span style={{ fontSize: '12px', color: 'var(--gov-text-muted)' }}>
+          <span style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
             Algorithm: SHA-256 (NIST FIPS 180-4)
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label className="form-label">Select Registered Document:</label>
+        <div className="gov-card-body" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Select registered document
+            </label>
             <select
-              className="form-select"
               value={selectedDocId}
               onChange={(e) => handleSelectDoc(Number(e.target.value))}
+              style={{
+                width: '100%',
+                padding: '10px 12px',
+                fontSize: '13px',
+                borderRadius: '10px',
+                border: '1px solid #cbd5e1',
+                background: '#ffffff',
+                color: '#0f172a',
+                outline: 'none',
+                boxSizing: 'border-box'
+              }}
             >
               {documents.map((d) => (
                 <option key={d.id} value={d.id}>
@@ -125,57 +136,74 @@ export const IntegrityLab: React.FC<IntegrityLabProps> = ({ initialDocument }) =
             </select>
           </div>
 
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              className="btn-gov btn-gov-blue"
-              onClick={runVerification}
-              disabled={isVerifying || !selectedDocId}
-              style={{ flex: 1 }}
-              id="btn-run-verify"
-            >
-              <RefreshCw size={15} style={{ animation: isVerifying ? 'spin 1s linear infinite' : 'none' }} />
-              {isVerifying ? 'Verifying Disk Bits...' : 'Verify Integrity (DEMO 7)'}
-            </button>
-          </div>
+          <button
+            onClick={runVerification}
+            disabled={isVerifying || !selectedDocId}
+            className="btn btn-primary"
+            style={{ minHeight: '42px', width: '100%' }}
+            id="btn-run-verify"
+          >
+            <RefreshCw size={15} style={{ animation: isVerifying ? 'spin 1s linear infinite' : 'none' }} />
+            {isVerifying ? 'Verifying...' : 'Verify Integrity'}
+          </button>
         </div>
 
-        {/* Hackathon Simulation Lab Box */}
         {activeDocState && (
-          <div
-            style={{
-              marginTop: '20px',
-              padding: '16px',
-              background: activeDocState.isTampered ? '#1a0404' : '#041604',
-              border: `2px solid ${activeDocState.isTampered ? '#ef4444' : '#00ff00'}`,
-              boxShadow: `4px 4px 0px ${activeDocState.isTampered ? '#ef4444' : '#00ff00'}`,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <div style={{ fontWeight: 900, fontSize: '13px', color: activeDocState.isTampered ? '#ef4444' : '#00ff00', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  <Zap size={16} />
-                  HACKATHON DEMO LAB // TAMPER SIMULATION ENGINE
-                </div>
-                <p style={{ fontSize: '12px', color: '#ffffff', marginTop: '2px', fontFamily: 'var(--font-mono)' }}>
+          <div style={{ padding: '0 20px 20px' }}>
+            <div
+              style={{
+                background: activeDocState.isTampered ? '#fff1f2' : '#f0fdf4',
+                border: `1px solid ${activeDocState.isTampered ? '#fecdd3' : '#bbf7d0'}`,
+                borderRadius: '12px',
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '11px',
+                    fontWeight: 800,
+                    letterSpacing: '0.08em',
+                    textTransform: 'uppercase',
+                    color: activeDocState.isTampered ? '#b91c1c' : '#15803d',
+                    background: activeDocState.isTampered ? '#fee2e2' : '#dcfce7',
+                    border: `1px solid ${activeDocState.isTampered ? '#fca5a5' : '#86efac'}`,
+                    borderRadius: '999px',
+                    padding: '6px 10px'
+                  }}
+                >
+                  <Zap size={14} />
+                  {activeDocState.isTampered ? 'Tamper simulation active' : 'System authentic'}
+                </span>
+                <span style={{ fontSize: '12px', color: '#475569' }}>
                   {activeDocState.isTampered
-                    ? 'STATUS: DISK TAMPERED. 1 unauthorized byte injected into storage payload.'
-                    : 'STATUS: AUTHENTIC. Pristine cryptographic integrity maintained.'}
-                </p>
+                    ? '1 unauthorized byte was injected into the storage payload.'
+                    : 'No integrity anomalies detected. Storage is secure.'}
+                </span>
               </div>
 
               <button
-                className={`btn-gov ${activeDocState.isTampered ? 'btn-gov-success' : 'btn-gov-danger'} btn-gov-sm`}
                 onClick={handleToggleTamper}
                 disabled={tamperLoading}
+                className={activeDocState.isTampered ? 'btn btn-secondary' : 'btn btn-primary'}
+                style={{ minHeight: '38px' }}
                 id="btn-tamper-toggle"
               >
                 {activeDocState.isTampered ? (
                   <>
-                    <RotateCcw size={14} /> Restore Original Physical File
+                    <RotateCcw size={14} /> Restore Original File
                   </>
                 ) : (
                   <>
-                    <AlertTriangle size={14} /> Simulate Malicious Disk Tampering
+                    <AlertTriangle size={14} /> Simulate Tampering
                   </>
                 )}
               </button>
@@ -184,87 +212,99 @@ export const IntegrityLab: React.FC<IntegrityLabProps> = ({ initialDocument }) =
         )}
       </div>
 
-      {/* Verification Result Display (GREEN vs RED) */}
       {result && (
         <div
           className="gov-card"
           style={{
-            border: `2px solid ${result.integrity === 'VALID' ? '#00ff00' : '#ef4444'}`,
-            boxShadow: `6px 6px 0px ${result.integrity === 'VALID' ? '#00ff00' : '#ef4444'}`,
-            background: result.integrity === 'VALID' ? '#041604' : '#1a0404',
+            borderRadius: '16px',
+            border: `1px solid ${result.integrity === 'VALID' ? '#86efac' : '#fca5a5'}`,
+            background: result.integrity === 'VALID' ? '#f0fdf4' : '#fff1f2',
+            overflow: 'hidden'
           }}
           id="verification-result-card"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '18px' }}>
-            {result.integrity === 'VALID' ? (
-              <div style={{ width: '48px', height: '48px', background: '#00ff00', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #ffffff' }}>
-                <CheckCircle2 size={28} color="#000000" />
-              </div>
-            ) : (
-              <div style={{ width: '48px', height: '48px', background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #ffffff' }}>
-                <ShieldAlert size={28} color="#000000" />
-              </div>
-            )}
-
-            <div>
+          <div className="gov-card-header" style={{ borderBottom: '1px solid #e2e8f0', background: result.integrity === 'VALID' ? '#f0fdf4' : '#fff1f2' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div
                 style={{
-                  fontSize: '20px',
-                  fontWeight: 900,
-                  color: result.integrity === 'VALID' ? '#00ff00' : '#ef4444',
-                  letterSpacing: '-0.02em',
-                  textTransform: 'uppercase',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: result.integrity === 'VALID' ? '#dcfce7' : '#fee2e2',
+                  color: result.integrity === 'VALID' ? '#15803d' : '#b91c1c'
                 }}
               >
-                {result.integrity === 'VALID'
-                  ? 'DOCUMENT INTEGRITY: VALID [VERIFIED GREEN]'
-                  : 'CRITICAL ALERT: DOCUMENT TAMPERED / HASH MISMATCH [RED]'}
+                {result.integrity === 'VALID' ? <CheckCircle2 size={20} /> : <ShieldAlert size={20} />}
               </div>
-              <p style={{ fontSize: '13px', color: '#ffffff', marginTop: '2px' }}>
-                {result.message}
-              </p>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  {result.integrity === 'VALID' ? 'Document integrity valid' : 'Critical alert: document tampered'}
+                </div>
+                <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                  {result.integrity === 'VALID' ? 'Verified against the registered SHA-256 digest.' : result.message}
+                </div>
+              </div>
             </div>
+
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                color: result.integrity === 'VALID' ? '#15803d' : '#b91c1c',
+                background: result.integrity === 'VALID' ? '#dcfce7' : '#fee2e2',
+                border: `1px solid ${result.integrity === 'VALID' ? '#86efac' : '#fca5a5'}`,
+                borderRadius: '999px',
+                padding: '6px 10px'
+              }}
+            >
+              {result.integrity === 'VALID' ? 'Verified' : 'Tampered'}
+            </span>
           </div>
 
-          {/* Detailed Hash Comparison Table */}
-          <div style={{ background: '#000000', border: '2px solid #ffffff', padding: '16px', marginBottom: '14px' }}>
+          <div className="gov-card-body" style={{ background: '#ffffff' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
               <div>
-                <span style={{ fontSize: '11px', fontWeight: 900, color: '#a3a3a3', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-                  1. Stored Cryptographic Hash (Recorded at Ingress):
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Stored cryptographic hash
                 </span>
-                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12.5px', background: '#111111', padding: '10px 12px', border: '1px solid #ffffff', wordBreak: 'break-all', fontWeight: 800, color: '#ffffff', marginTop: '4px' }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: '12.5px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', wordBreak: 'break-all', color: '#0f172a', marginTop: '4px' }}>
                   {result.storedHash}
                 </div>
               </div>
 
               <div>
-                <span style={{ fontSize: '11px', fontWeight: 900, color: '#a3a3a3', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
-                  2. Live Disk Stream Hash (Calculated Just Now from Storage):
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Live disk stream hash
                 </span>
                 <div
                   style={{
                     fontFamily: 'var(--font-mono)',
                     fontSize: '12.5px',
-                    background: '#111111',
+                    background: result.integrity === 'VALID' ? '#f0fdf4' : '#fff1f2',
+                    border: `1px solid ${result.integrity === 'VALID' ? '#86efac' : '#fca5a5'}`,
+                    borderRadius: '10px',
                     padding: '10px 12px',
-                    border: `2px solid ${result.integrity === 'VALID' ? '#00ff00' : '#ef4444'}`,
                     wordBreak: 'break-all',
-                    fontWeight: 900,
-                    color: result.integrity === 'VALID' ? '#00ff00' : '#ef4444',
+                    color: result.integrity === 'VALID' ? '#166534' : '#991b1b',
                     marginTop: '4px',
+                    fontWeight: 700
                   }}
                 >
                   {result.calculatedHash}
                 </div>
               </div>
             </div>
-          </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#a3a3a3', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
-            <span>Verified By: <strong style={{ color: '#ffffff' }}>{result.checkedBy}</strong></span>
-            <span>Timestamp: <strong style={{ color: '#ffffff' }}>{new Date(result.checkedAt).toLocaleString()}</strong></span>
-            <span>Standard: <strong style={{ color: '#00ff00' }}>Section 65B Certified</strong></span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginTop: '14px', fontSize: '11px', color: '#475569', fontFamily: 'var(--font-mono)', textTransform: 'uppercase' }}>
+              <span>Verified by: <strong style={{ color: '#0f172a' }}>{result.checkedBy}</strong></span>
+              <span>Timestamp: <strong style={{ color: '#0f172a' }}>{new Date(result.checkedAt).toLocaleString()}</strong></span>
+              <span>Standard: <strong style={{ color: '#1d4ed8' }}>Section 65B Certified</strong></span>
+            </div>
           </div>
         </div>
       )}
