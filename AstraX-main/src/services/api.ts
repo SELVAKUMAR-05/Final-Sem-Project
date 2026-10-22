@@ -3,6 +3,7 @@ import {
   Case, 
   LegalDocument, 
   DocumentVersion, 
+  DigitalSignature,
   AuditLog, 
   IntegrityCheckResult, 
   DashboardStats,
@@ -230,8 +231,8 @@ export const api = {
     });
   },
 
-  async signDocument(docId: number): Promise<{ message: string; signature: any; document: LegalDocument }> {
-    return request<{ message: string; signature: any; document: LegalDocument }>(`/api/documents/${docId}/sign`, {
+  async signDocument(docId: number): Promise<{ message: string; signature: DigitalSignature; document: LegalDocument }> {
+    return request<{ message: string; signature: DigitalSignature; document: LegalDocument }>(`/api/documents/${docId}/sign`, {
       method: 'POST',
     });
   },

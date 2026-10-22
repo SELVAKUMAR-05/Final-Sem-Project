@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { api } from '../../services/api.ts';
@@ -46,22 +46,31 @@ export const CasesPage: React.FC = () => {
   const [description, setDescription] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const fetchCases = async () => {
+  const fetchCases = useCallback(async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) setLoading(true);
       const data = await api.getCases();
       setCases(data);
     } catch (err) {
       console.error('Failed to load cases:', err);
       showToast('Failed to load case repository', 'error');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
-  };
+  }, [showToast]);
 
   useEffect(() => {
-    fetchCases();
-  }, []);
+    void fetchCases();
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void fetchCases(false);
+    };
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, [fetchCases]);
 
   const handleCreateCase = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -119,8 +128,11 @@ export const CasesPage: React.FC = () => {
   );
 
   const activeCount = cases.filter((c) => c.status === 'UNDER_INVESTIGATION').length;
-  const inTrialCount = cases.filter((c) => c.status === 'IN_TRIAL').length;
-  const highPriorityCount = cases.filter((c) => c.priority === 'HIGH' || c.priority === 'CRITICAL').length;
+  const inTrialCount = cases.filter((c) => c.status === 'IN_COURT').length;
+  const closedCount = cases.filter((c) => c.status === 'CLOSED').length;
+  const highPriorityCount = cases.filter(
+    (c) => c.status !== 'CLOSED' && (c.priority === 'HIGH' || c.priority === 'CRITICAL')
+  ).length;
 
   return (
     <div>
@@ -150,7 +162,7 @@ export const CasesPage: React.FC = () => {
       </div>
 
       {/* Summary KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '16px', marginBottom: '24px' }}>
         <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px 20px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
             Total Cases
@@ -179,8 +191,17 @@ export const CasesPage: React.FC = () => {
         </div>
 
         <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px 20px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+            Closed Cases
+          </div>
+          <div style={{ fontSize: '24px', fontWeight: 800, color: '#475569', marginTop: '6px' }}>
+            {closedCount}
+          </div>
+        </div>
+
+        <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px 20px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase' }}>
-            High / Critical Priority
+            Open High / Critical
           </div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: '#b91c1c', marginTop: '6px' }}>
             {highPriorityCount}
@@ -241,9 +262,10 @@ export const CasesPage: React.FC = () => {
             }}
           >
             <option value="ALL">All Statuses</option>
+            <option value="PENDING_REVIEW">Pending Review</option>
             <option value="UNDER_INVESTIGATION">Under Investigation</option>
             <option value="CHARGE_SHEET_FILED">Charge Sheet Filed</option>
-            <option value="IN_TRIAL">In Trial</option>
+            <option value="IN_COURT">In Court</option>
             <option value="CLOSED">Closed</option>
           </select>
         </div>

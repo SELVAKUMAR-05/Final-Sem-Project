@@ -71,7 +71,7 @@ import {
 import { addAuditLog, getAuditLogs, verifyAuditChain, toggleAuditTamperSimulation } from './server/audit.ts';
 import { extractTextFromBuffer } from './server/ocr.ts';
 import { AIService } from './server/ai.ts';
-import { UserRole, DocumentType } from './src/types.ts';
+import { UserRole, DocumentType, CaseStatus } from './src/types.ts';
 
 // Initialize DB and sample cases
 initDatabase();
@@ -627,11 +627,41 @@ app.put('/api/cases/:id', authenticateJwt, (req: AuthenticatedRequest, res: Resp
     return res.status(404).json({ status: 404, message: 'Case not found' });
   }
 
+  const allowedCaseStatuses: CaseStatus[] = [
+    'UNDER_INVESTIGATION',
+    'PENDING_REVIEW',
+    'CHARGE_SHEET_FILED',
+    'IN_COURT',
+    'CLOSED',
+  ];
+  if (req.body.status !== undefined) {
+    if (req.user!.role !== 'ADMIN' && req.user!.role !== 'POLICE_OFFICER') {
+      return res.status(403).json({ status: 403, message: 'Only administrators and police officers can change case status.' });
+    }
+    if (!allowedCaseStatuses.includes(req.body.status)) {
+      return res.status(400).json({ status: 400, message: 'Invalid case status.' });
+    }
+  }
+
+  const previousStatus = foundCase.status;
   const updatedCase = updateCase(caseId, {
     status: req.body.status,
     priority: req.body.priority,
     investigatingOfficer: req.body.investigatingOfficer,
   })!;
+
+  if (req.body.status !== undefined && previousStatus !== updatedCase.status) {
+    addCaseTimelineEvent({
+      caseId: updatedCase.id,
+      caseNumber: updatedCase.caseNumber,
+      eventType: 'CASE_STATUS_CHANGED',
+      title: `Case status changed to ${updatedCase.status.replace(/_/g, ' ')}`,
+      description: `Status changed from ${previousStatus.replace(/_/g, ' ')} to ${updatedCase.status.replace(/_/g, ' ')} by ${req.user!.fullName} (${req.user!.role}).`,
+      actor: req.user!.fullName,
+      actorRole: req.user!.role,
+      metadata: { previousStatus, status: updatedCase.status },
+    });
+  }
 
   addAuditLog({
     userId: req.user!.userId,

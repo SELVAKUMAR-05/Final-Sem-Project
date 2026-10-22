@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api.ts';
-import { LegalDocument } from '../types.ts';
+import { DigitalSignature, LegalDocument } from '../types.ts';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useToast } from './common/Toast.tsx';
 import {
   PenTool,
   ShieldCheck,
-  Award,
   CheckCircle,
-  FileText,
   User,
-  Calendar,
   Lock,
   Stamp,
+  ShieldAlert,
 } from 'lucide-react';
+
+function formatSignatureTimestamp(timestamp: string | undefined): string | null {
+  if (!timestamp) return null;
+  const date = new Date(timestamp);
+  return Number.isNaN(date.getTime()) ? null : date.toLocaleString();
+}
 
 export const DigitalSignatureView: React.FC = () => {
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [signingId, setSigningId] = useState<number | null>(null);
   const [successNotice, setSuccessNotice] = useState<string | null>(null);
+  const canSignDocuments = currentUser?.role !== 'LAWYER';
 
   const fetchDocs = async () => {
     try {
@@ -41,10 +48,16 @@ export const DigitalSignatureView: React.FC = () => {
     try {
       setSigningId(docId);
       const res = await api.signDocument(docId);
-      setSuccessNotice(`Document successfully signed using ${res.signature.algorithm} and registered with Certificate: ${res.signature.certificateInfo}`);
+      const signedAt = formatSignatureTimestamp(res.signature.signedAt);
+      setSuccessNotice(
+        `Document signed by ${res.signature.signedBy}${signedAt ? ` on ${signedAt}` : ''}. Certificate: ${res.signature.certificateIssuer}.`
+      );
       await fetchDocs();
     } catch (err: any) {
-      alert(err.message || 'Signing failed');
+      const message = err.status === 403
+        ? `Your ${currentUser?.role ?? 'current'} role is not authorized to apply digital signatures. Ask an authorized officer to sign this document.`
+        : err.message || 'Unable to apply the digital signature. Please try again.';
+      showToast(message, 'error');
     } finally {
       setSigningId(null);
     }
@@ -67,6 +80,34 @@ export const DigitalSignatureView: React.FC = () => {
         <div className="gov-alert success">
           <CheckCircle size={18} />
           <span>{successNotice}</span>
+        </div>
+      )}
+
+      {!canSignDocuments && (
+        <div
+          role="status"
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+            marginBottom: '18px',
+            padding: '16px 18px',
+            borderRadius: '12px',
+            border: '1px solid #fed7aa',
+            background: 'linear-gradient(135deg, #fff7ed, #fff)',
+            boxShadow: '0 8px 20px rgba(154, 52, 18, 0.08)',
+            color: '#7c2d12',
+          }}
+        >
+          <div style={{ display: 'grid', placeItems: 'center', width: 38, height: 38, flexShrink: 0, borderRadius: '10px', background: '#ffedd5' }}>
+            <ShieldAlert size={21} color="#c2410c" />
+          </div>
+          <div>
+            <strong style={{ display: 'block', fontSize: '14px', marginBottom: '4px' }}>Signature authority required</strong>
+            <span style={{ fontSize: '13px', lineHeight: 1.5 }}>
+              The {currentUser?.role} role can review documents but cannot apply PKI signatures. Please ask an authorized officer to sign.
+            </span>
+          </div>
         </div>
       )}
 
@@ -100,7 +141,14 @@ export const DigitalSignatureView: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {documents.map((doc) => (
+            {documents.map((doc) => {
+              const signedSignatures = [...(doc.signatures || [])]
+                .filter((signature) => signature.status === 'SIGNED')
+                .sort((first, second) => second.signedAt.localeCompare(first.signedAt));
+              const latestSignature: DigitalSignature | undefined = signedSignatures[0];
+              const signedTimestamp = formatSignatureTimestamp(latestSignature?.signedAt);
+
+              return (
               <tr key={doc.id}>
                 <td>
                   <div style={{ fontWeight: 700, color: 'var(--gov-navy-950)' }}>
@@ -116,16 +164,16 @@ export const DigitalSignatureView: React.FC = () => {
                 </td>
 
                 <td>
-                  <span className={`badge-status ${doc.signed ? 'success' : 'warning'}`}>
-                    {doc.signed ? 'DIGITALLY SIGNED' : 'PENDING SIGNATURE'}
+                  <span className={`badge-status ${latestSignature ? 'success' : 'warning'}`}>
+                    {latestSignature ? 'DIGITALLY SIGNED' : 'PENDING SIGNATURE'}
                   </span>
                 </td>
 
                 <td>
-                  {doc.signedBy ? (
+                  {latestSignature ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: 600 }}>
                       <User size={14} color="#2563eb" />
-                      {doc.signedBy}
+                      {latestSignature.signedBy}
                     </div>
                   ) : (
                     <span style={{ color: 'var(--gov-text-muted)', fontSize: '12px' }}>Awaiting Officer</span>
@@ -133,11 +181,11 @@ export const DigitalSignatureView: React.FC = () => {
                 </td>
 
                 <td>
-                  {doc.signed ? (
+                  {latestSignature ? (
                     <div style={{ fontSize: '12px' }}>
-                      <span style={{ fontWeight: 600, color: '#059669' }}>Ed25519-SHA512</span>
+                      <span style={{ fontWeight: 600, color: '#059669' }}>Digital signature</span>
                       <div style={{ fontSize: '10.5px', color: 'var(--gov-text-muted)' }}>
-                        NCRB-NIC-CA-2026-ROOT
+                        {latestSignature.certificateIssuer}
                       </div>
                     </div>
                   ) : (
@@ -146,30 +194,39 @@ export const DigitalSignatureView: React.FC = () => {
                 </td>
 
                 <td>
-                  {doc.signedAt ? (
-                    <span style={{ fontSize: '12px' }}>{new Date(doc.signedAt).toLocaleString()}</span>
+                  {signedTimestamp ? (
+                    <span style={{ fontSize: '12px' }}>{signedTimestamp}</span>
                   ) : (
-                    <span style={{ color: 'var(--gov-text-muted)', fontSize: '12px' }}>-</span>
+                    <span style={{ color: 'var(--gov-text-muted)', fontSize: '12px' }}>
+                      {doc.signed ? 'Timestamp unavailable' : 'Pending signature'}
+                    </span>
                   )}
                 </td>
 
                 <td style={{ textAlign: 'right' }}>
-                  {doc.signed ? (
+                  {latestSignature ? (
                     <button className="btn-gov btn-gov-outline btn-gov-sm" style={{ color: '#059669', borderColor: '#a7f3d0' }} disabled>
                       <CheckCircle size={13} /> Verified
                     </button>
                   ) : (
                     <button
-                      className="btn-gov btn-gov-blue btn-gov-sm"
+                      className={`btn-gov ${canSignDocuments ? 'btn-gov-blue' : 'btn-gov-outline'} btn-gov-sm`}
                       onClick={() => handleSign(doc.id)}
-                      disabled={signingId === doc.id}
+                      disabled={!canSignDocuments || signingId === doc.id}
+                      title={!canSignDocuments ? 'An authorized officer must apply this signature' : undefined}
                     >
-                      <PenTool size={13} /> {signingId === doc.id ? 'Signing...' : 'Affix Signature'}
+                      {canSignDocuments ? <PenTool size={13} /> : <Lock size={13} />}
+                      {!canSignDocuments
+                        ? 'Officer signature required'
+                        : signingId === doc.id
+                          ? 'Signing...'
+                          : 'Affix Signature'}
                     </button>
                   )}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

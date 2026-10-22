@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LegalDocument, DocumentVersion } from '../types.ts';
 import { api } from '../services/api.ts';
 import { useAuth } from '../context/AuthContext.tsx';
+import { useToast } from './common/Toast.tsx';
 import {
   FileText,
   ShieldCheck,
@@ -31,6 +32,8 @@ interface DocumentDetailModalProps {
 
 export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ document: doc, onClose, onRefresh }) => {
   const { currentUser } = useAuth();
+  const { showToast } = useToast();
+  const canSignDocuments = currentUser?.role !== 'LAWYER';
   const [activeTab, setActiveTab] = useState<'preview' | 'overview' | 'workflow' | 'ai' | 'versions' | 'signatures' | 'new-version'>('preview');
 
   // Preview & Watermark state
@@ -116,12 +119,19 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
   };
 
   const handleSign = async () => {
+    if (!canSignDocuments) {
+      showToast(`The ${currentUser?.role} role cannot apply digital signatures. Ask an authorized officer to sign this document.`, 'error');
+      return;
+    }
     try {
       await api.signDocument(doc.id);
       setSignStatus('Document signed successfully with NCRB PKI Certificate!');
       onRefresh();
     } catch (err: any) {
-      alert(err.message || 'Signing failed');
+      const message = err.status === 403
+        ? `Your ${currentUser?.role ?? 'current'} role is not authorized to apply digital signatures. Ask an authorized officer to sign this document.`
+        : err.message || 'Unable to apply the digital signature. Please try again.';
+      showToast(message, 'error');
     }
   };
 
@@ -329,11 +339,16 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                       </button>
                     )}
 
-                    {!doc.isSigned && (
+                    {!doc.isSigned && canSignDocuments && (
                       <button className="btn btn-warning" onClick={handleSign}>
                         <FileSignature size={14} />
                         Apply PKI Digital Signature
                       </button>
+                    )}
+                    {!doc.isSigned && !canSignDocuments && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#9a3412', fontSize: '12px', fontWeight: 600 }}>
+                        <Lock size={14} /> Signature requires an authorized officer
+                      </span>
                     )}
                   </div>
 
@@ -504,13 +519,19 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h4 style={{ fontSize: '14px', color: '#0b2545' }}>PKI Digital Signatures</h4>
-                {!doc.isSigned && (
+                {!doc.isSigned && canSignDocuments && (
                   <button className="btn btn-primary btn-sm" onClick={handleSign}>
                     <FileSignature size={13} />
                     Sign Document
                   </button>
                 )}
               </div>
+              {!doc.isSigned && !canSignDocuments && (
+                <div role="status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '12px' }}>
+                  <Lock size={15} />
+                  Your {currentUser?.role} role can review this signature record but cannot sign documents.
+                </div>
+              )}
               {doc.signatures && doc.signatures.length > 0 ? (
                 doc.signatures.map((s, idx) => (
                   <div key={idx} style={{ background: '#faf5ff', border: '1px solid #e9d5ff', padding: '14px', borderRadius: '6px' }}>

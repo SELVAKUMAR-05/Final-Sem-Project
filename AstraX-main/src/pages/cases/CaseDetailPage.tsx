@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext.tsx';
 import { api } from '../../services/api.ts';
 import {
   Case,
+  CaseStatus,
   LegalDocument,
   Evidence,
   CaseTimelineEvent,
@@ -36,6 +37,14 @@ import {
 
 type CaseTab = 'overview' | 'documents' | 'evidence' | 'timeline' | 'audit';
 
+const CASE_STATUS_OPTIONS: Array<{ value: CaseStatus; label: string }> = [
+  { value: 'UNDER_INVESTIGATION', label: 'Under Investigation' },
+  { value: 'PENDING_REVIEW', label: 'Pending Review' },
+  { value: 'CHARGE_SHEET_FILED', label: 'Charge Sheet Filed' },
+  { value: 'IN_COURT', label: 'In Court' },
+  { value: 'CLOSED', label: 'Closed' },
+];
+
 export const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
   const navigate = useNavigate();
@@ -44,6 +53,8 @@ export const CaseDetailPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<CaseTab>('overview');
   const [caseData, setCaseData] = useState<Case | null>(null);
+  const [selectedCaseStatus, setSelectedCaseStatus] = useState<CaseStatus | ''>('');
+  const [isSavingCaseStatus, setIsSavingCaseStatus] = useState<boolean>(false);
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
   const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
   const [timelineEvents, setTimelineEvents] = useState<CaseTimelineEvent[]>([]);
@@ -76,6 +87,7 @@ export const CaseDetailPage: React.FC = () => {
       setLoading(true);
       const res = await api.getCaseById(numericId);
       setCaseData(res.case);
+      setSelectedCaseStatus(res.case.status);
       setDocuments(res.documents || []);
 
       // Concurrently load related evidence, timeline, and audit logs
@@ -113,6 +125,24 @@ export const CaseDetailPage: React.FC = () => {
   useEffect(() => {
     loadAllCaseData();
   }, [caseId]);
+
+  const handleCaseStatusChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!caseData || !selectedCaseStatus || selectedCaseStatus === caseData.status) return;
+
+    try {
+      setIsSavingCaseStatus(true);
+      const updatedCase = await api.updateCase(caseData.id, { status: selectedCaseStatus });
+      setCaseData((current) => current ? { ...current, ...updatedCase } : updatedCase);
+      setSelectedCaseStatus(updatedCase.status);
+      showToast(`Case status updated to ${updatedCase.status.replace(/_/g, ' ')}.`, 'success');
+      await loadAllCaseData();
+    } catch (err: any) {
+      showToast(err.message || 'Unable to update the case status. Please try again.', 'error');
+    } finally {
+      setIsSavingCaseStatus(false);
+    }
+  };
 
   const handleAddEvidence = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -299,6 +329,52 @@ export const CaseDetailPage: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {(currentUser?.role === 'ADMIN' || currentUser?.role === 'POLICE_OFFICER') && (
+          <form
+            onSubmit={handleCaseStatusChange}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '14px',
+              flexWrap: 'wrap',
+              marginTop: '18px',
+              padding: '14px 16px',
+              border: '1px solid #dbeafe',
+              borderRadius: '10px',
+              background: '#f8fbff',
+            }}
+          >
+            <div>
+              <strong style={{ display: 'block', color: '#0f172a', fontSize: '13px' }}>Update case status</strong>
+              <span style={{ color: '#64748b', fontSize: '12px' }}>Status changes are recorded in the case timeline.</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <select
+                aria-label="Case status"
+                value={selectedCaseStatus}
+                onChange={(e) => setSelectedCaseStatus(e.target.value as CaseStatus)}
+                disabled={isSavingCaseStatus}
+                className="form-input"
+                style={{ minWidth: '210px', width: 'auto', padding: '9px 12px' }}
+              >
+                {CASE_STATUS_OPTIONS.map((status) => (
+                  <option key={status.value} value={status.value}>{status.label}</option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={isSavingCaseStatus || !selectedCaseStatus || selectedCaseStatus === caseData.status}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '9px 14px', fontSize: '12px' }}
+              >
+                <CheckCircle2 size={14} />
+                {isSavingCaseStatus ? 'Saving...' : 'Save status'}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Dynamic Navigation Tabs */}
         <div
