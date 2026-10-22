@@ -109,7 +109,12 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       formData.append('file', file);
 
       const createdDoc = await api.uploadDocument(formData);
-      setSuccessMsg(`Document successfully uploaded and hashed! SHA-256: ${createdDoc.sha256Hash.slice(0, 16)}...`);
+      const extractionStatus = !createdDoc.ocrExtracted
+        ? ' Text search is unavailable because this file format is not supported for text extraction.'
+        : !createdDoc.extractedText?.trim()
+          ? ' No readable text was detected in this file.'
+          : ' Text extracted and indexed for search.';
+      setSuccessMsg(`Document successfully uploaded and hashed!${extractionStatus} SHA-256: ${createdDoc.sha256Hash.slice(0, 16)}...`);
       setTimeout(() => {
         onSuccess();
         onClose();

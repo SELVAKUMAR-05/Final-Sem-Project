@@ -4,7 +4,21 @@ import { AuditLog, UserRole, AuditVerificationResult } from '../src/types.ts';
 // In chronological order for forward cryptographic chaining
 let auditLogsChronological: AuditLog[] = [];
 let nextAuditId = 1;
+let onAuditLedgerChange: (() => void) | undefined;
 const GENESIS_HASH = '0000000000000000GENESIS_NCRB_AUDIT_LEDGER_ROOT_2026_BLOCK_0';
+
+export function setAuditLedgerChangeHandler(handler: () => void): void {
+  onAuditLedgerChange = handler;
+}
+
+export function getAuditLedgerSnapshot(): AuditLog[] {
+  return [...auditLogsChronological];
+}
+
+export function restoreAuditLedger(logs: AuditLog[]): void {
+  auditLogsChronological = [...logs].sort((a, b) => a.id - b.id);
+  nextAuditId = auditLogsChronological.reduce((maxId, log) => Math.max(maxId, log.id + 1), 1);
+}
 
 function computeRecordHash(data: {
   id: number;
@@ -74,6 +88,7 @@ export function addAuditLog(entry: {
   };
 
   auditLogsChronological.push(log);
+  onAuditLedgerChange?.();
   return log;
 }
 
@@ -181,6 +196,7 @@ export function toggleAuditTamperSimulation(targetId?: number): { isTampered: bo
       rec.description = originalTamperedBackup.description;
     }
     originalTamperedBackup = null;
+    onAuditLedgerChange?.();
     return {
       isTampered: false,
       message: 'Audit log entry restored. Cryptographic hash chain is now intact.',
@@ -201,6 +217,7 @@ export function toggleAuditTamperSimulation(targetId?: number): { isTampered: bo
     };
 
     target.description = `${target.description} [UNAUTHORIZED_SQL_MODIFICATION_INJECTED]`;
+    onAuditLedgerChange?.();
     return {
       isTampered: true,
       message: `Simulated unauthorized edit on Audit Record #${target.id}. Run verification to detect the broken block!`,

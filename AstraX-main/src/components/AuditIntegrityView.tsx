@@ -187,7 +187,7 @@ export const AuditIntegrityView: React.FC = () => {
                         </span>
                       </div>
                       <span className="timeline-time">
-                        {new Date(log.timestamp).toLocaleString()}
+                        {new Date(log.createdAt).toLocaleString()}
                       </span>
                     </div>
 

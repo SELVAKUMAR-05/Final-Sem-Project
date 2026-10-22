@@ -269,7 +269,7 @@ export const AuditLogsPage: React.FC = () => {
               {paginatedLogs.map((log) => (
                 <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '12px 16px', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px', color: '#64748b' }}>
-                    {new Date(log.timestamp).toLocaleString()}
+                    {new Date(log.createdAt).toLocaleString()}
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ fontWeight: 700, color: '#0f172a' }}>{log.username}</div>

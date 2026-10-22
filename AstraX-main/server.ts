@@ -9,6 +9,7 @@ import { createServer as createViteServer } from 'vite';
 
 import {
   initDatabase,
+  persistDatabase,
   getDb,
   getUserProfilePhotoFile,
   setUserProfilePhotoFile,
@@ -18,6 +19,7 @@ import {
   getAllCases,
   getCaseById,
   createCase,
+  updateCase,
   getAllDocuments,
   getDocumentById,
   createDocument,
@@ -384,6 +386,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
 
   db.users.push(newUser);
   db.userPasswords.set(newId, hashPassword(password));
+  persistDatabase();
 
   addAuditLog({
     userId: newId,
@@ -431,6 +434,7 @@ app.post('/api/auth/change-password', authenticateJwt, (req: AuthenticatedReques
   }
 
   db.userPasswords.set(req.user!.userId, hashPassword(newPassword));
+  persistDatabase();
 
   addAuditLog({
     userId: req.user!.userId,
@@ -488,6 +492,7 @@ app.post('/api/users', authenticateJwt, (req: AuthenticatedRequest, res: Respons
 
   db.users.push(newUser);
   db.userPasswords.set(newId, hashPassword(password));
+  persistDatabase();
 
   addAuditLog({
     userId: req.user.userId,
@@ -531,6 +536,7 @@ app.put('/api/users/:id', authenticateJwt, (req: AuthenticatedRequest, res: Resp
     user.role = req.body.role;
   }
 
+  persistDatabase();
   return res.json(user);
 });
 
@@ -621,24 +627,25 @@ app.put('/api/cases/:id', authenticateJwt, (req: AuthenticatedRequest, res: Resp
     return res.status(404).json({ status: 404, message: 'Case not found' });
   }
 
-  if (req.body.status) foundCase.status = req.body.status;
-  if (req.body.priority) foundCase.priority = req.body.priority;
-  if (req.body.investigatingOfficer) foundCase.investigatingOfficer = req.body.investigatingOfficer;
-  foundCase.updatedAt = new Date().toISOString();
+  const updatedCase = updateCase(caseId, {
+    status: req.body.status,
+    priority: req.body.priority,
+    investigatingOfficer: req.body.investigatingOfficer,
+  })!;
 
   addAuditLog({
     userId: req.user!.userId,
     username: req.user!.username,
     role: req.user!.role,
     action: 'CASE_UPDATED',
-    caseId: foundCase.id,
-    caseNumber: foundCase.caseNumber,
+    caseId: updatedCase.id,
+    caseNumber: updatedCase.caseNumber,
     ipAddress: req.ip || '127.0.0.1',
-    description: `Updated case ${foundCase.caseNumber}: Status=${foundCase.status}, Priority=${foundCase.priority}`,
+    description: `Updated case ${updatedCase.caseNumber}: Status=${updatedCase.status}, Priority=${updatedCase.priority}`,
     status: 'SUCCESS',
   });
 
-  return res.json(foundCase);
+  return res.json(updatedCase);
 });
 
 // -------------------------------------------------------------
@@ -768,13 +775,13 @@ app.post(
       }
 
       const finalPath = path.join(caseFolder, storedFilename);
-      fs.writeFileSync(finalPath, req.file.buffer);
 
       // Compute SHA-256 Hash
       const sha256Hash = computeSha256(req.file.buffer);
 
       // OCR & Keyword Extraction
       const ocrData = await extractTextFromBuffer(req.file.buffer, originalFilename, req.file.mimetype);
+      fs.writeFileSync(finalPath, req.file.buffer);
 
       const newDoc = createDocument({
         caseId: caseRecord.id,
@@ -797,7 +804,7 @@ app.post(
         classification: classification || 'RESTRICTED',
         workflowStatus: 'SUBMITTED',
         extractedText: ocrData.extractedText,
-        ocrExtracted: true,
+        ocrExtracted: ocrData.processed,
       });
 
       addAuditLog({
@@ -908,9 +915,10 @@ app.post(
       const caseFolder = path.join(STORAGE_DIR, 'cases', doc.caseNumber);
 
       const finalPath = path.join(caseFolder, storedFilename);
-      fs.writeFileSync(finalPath, req.file.buffer);
 
       const newHash = computeSha256(req.file.buffer);
+      const ocrData = await extractTextFromBuffer(req.file.buffer, req.file.originalname, req.file.mimetype);
+      fs.writeFileSync(finalPath, req.file.buffer);
 
       const version = addDocumentVersion(
         docId,
@@ -918,6 +926,8 @@ app.post(
         storedFilename,
         newHash,
         req.file.buffer.length,
+        ocrData.extractedText,
+        ocrData.processed,
         req.user!.fullName,
         req.user!.userId,
         changeDescription

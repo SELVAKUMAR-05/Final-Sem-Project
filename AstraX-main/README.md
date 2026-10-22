@@ -30,7 +30,7 @@ AstraX Evidence Wallet is a full-stack, enterprise-grade, cryptographically fort
 - **Backend:** Express & Node.js (with full Spring Boot reference architecture in `backend/` for Java deployments), REST APIs, Multer multipart handler.
 - **Database:** MySQL 8.0 schema & seed scripts (`database/schema.sql`, `database/data.sql`).
 - **Security:** JWT Authentication, PBKDF2/BCrypt hashing, AES-256-CBC encryption, SHA-256 cryptographic digests, Ed25519 digital signature simulation.
-- **Document Processing:** OCR text extraction interface, MIME-type and extension validation, unique server-side filename generation.
+- **Document Processing:** PDF.js text extraction with Tesseract.js English OCR for scanned PDF pages and images, MIME-type and extension validation, unique server-side filename generation.
 - **DevOps:** Docker, Docker Compose (`docker-compose.yml`), automated health-checks.
 
 ---
@@ -83,6 +83,7 @@ npm run dev
 Open browser at `http://localhost:3000`.
 
 Without `OPENROUTER_API_KEY`, the assistant uses its limited local vault analyzer and cannot answer general questions. `OPENROUTER_MODEL` is optional and defaults to `openrouter/free`.
+The local demo persists cases, documents, evidence/custody events, users, notifications, and audit history in `storage/registry.json` and keeps the previous valid registry in `storage/registry.json.bak`. Keep and back up the entire `storage/` directory; this protects against normal restarts and some registry-file corruption, but is not a substitute for off-device backups and cannot protect against disk failure or deletion of the storage directory.
 
 ### Running with Docker Compose
 ```bash

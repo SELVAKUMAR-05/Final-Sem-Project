@@ -1286,7 +1286,7 @@ body {
 
 @page case-report {
   size: A4 portrait;
-  margin: 12mm;
+  margin: 8mm;
 }
 
 @media print {
@@ -1351,6 +1351,33 @@ body {
     print-color-adjust: exact;
   }
 
+  body.printing-case-report #case-report-document [style*="display: flex"],
+  body.printing-case-report #case-report-document [style*="display: grid"] {
+    display: block !important;
+    gap: 0 !important;
+  }
+
+  body.printing-case-report #case-report-document > div {
+    margin-bottom: 10px !important;
+  }
+
+  body.printing-case-report #case-report-document > div:last-child {
+    margin-top: 16px !important;
+    padding-top: 10px !important;
+  }
+
+  body.printing-case-report #case-report-document h4 {
+    margin-top: 0 !important;
+    margin-bottom: 6px !important;
+    padding-bottom: 3px !important;
+  }
+
+  body.printing-case-report #case-report-document p {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+    line-height: 1.35 !important;
+  }
+
   body.printing-case-report #case-report-document h2 {
     font-size: 15pt !important;
   }
@@ -1376,6 +1403,8 @@ body {
     width: 100% !important;
     table-layout: fixed !important;
     font-size: 7pt !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 
   body.printing-case-report #case-report-document .gov-table th,
@@ -1390,8 +1419,30 @@ body {
   }
 
   body.printing-case-report #case-report-document .gov-table tr {
-    break-inside: avoid-page;
-    page-break-inside: avoid;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  body.printing-case-report #case-report-document .gov-table-container {
+    display: block !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  body.printing-case-report #case-report-document .gov-table thead,
+  body.printing-case-report #case-report-document .gov-table tbody {
+    display: table-row-group !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+
+  body.printing-case-report #case-report-document .gov-table thead {
+    display: table-header-group !important;
+  }
+
+  body.printing-case-report #case-report-document * {
+    orphans: 1;
+    widows: 1;
   }
 
   body.printing-case-report #case-report-document .mono-hash {

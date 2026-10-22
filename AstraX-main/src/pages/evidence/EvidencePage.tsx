@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { api } from '../../services/api.ts';
-import { Evidence, EvidenceStatus } from '../../types.ts';
+import { Case, Evidence, EvidenceStatus } from '../../types.ts';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs.tsx';
 import { Pagination } from '../../components/common/Pagination.tsx';
 import { EmptyState } from '../../components/common/EmptyState.tsx';
@@ -28,7 +28,9 @@ export const EvidencePage: React.FC = () => {
   const { showToast } = useToast();
 
   const [evidenceList, setEvidenceList] = useState<Evidence[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [casesLoading, setCasesLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -36,7 +38,7 @@ export const EvidencePage: React.FC = () => {
 
   // New Evidence Modal
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
-  const [caseNumber, setCaseNumber] = useState<string>('');
+  const [selectedCaseId, setSelectedCaseId] = useState<string>('');
   const [evidenceType, setEvidenceType] = useState<string>('Mobile Device / Smartphone');
   const [description, setDescription] = useState<string>('');
   const [sealNumber, setSealNumber] = useState<string>('');
@@ -56,23 +58,37 @@ export const EvidencePage: React.FC = () => {
     }
   };
 
+  const fetchCases = async () => {
+    try {
+      const data = await api.getCases();
+      setCases(data);
+    } catch (err) {
+      console.error('Failed to load registered cases:', err);
+      showToast('Error loading registered cases', 'error');
+    } finally {
+      setCasesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchEvidence();
+    fetchCases();
   }, []);
 
   const handleCreateEvidence = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!caseNumber || !description || !sealNumber) return;
+    if (!selectedCaseId || !description || !sealNumber) return;
+
+    const selectedCase = cases.find((registeredCase) => registeredCase.id === Number(selectedCaseId));
+    if (!selectedCase) {
+      showToast('Select a registered case before registering evidence', 'error');
+      return;
+    }
 
     try {
       setIsSubmitting(true);
-      // Look up caseId from caseNumber or fetch
-      const cases = await api.getCases();
-      const targetCase = cases.find((c) => c.caseNumber.toLowerCase() === caseNumber.trim().toLowerCase());
-      const caseId = targetCase ? targetCase.id : 1;
-
       const created = await api.createEvidence({
-        caseId,
+        caseId: selectedCase.id,
         evidenceType,
         description,
         sealNumber,
@@ -86,7 +102,7 @@ export const EvidencePage: React.FC = () => {
       navigate(`/evidence/${created.evidenceId}`);
 
       // Reset
-      setCaseNumber('');
+      setSelectedCaseId('');
       setDescription('');
       setSealNumber('');
       setCollectionLocation('');
@@ -392,11 +408,10 @@ export const EvidencePage: React.FC = () => {
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
                     Case Docket Number *
                   </label>
-                  <input
-                    type="text"
-                    value={caseNumber}
-                    onChange={(e) => setCaseNumber(e.target.value)}
-                    placeholder="e.g. CASE-2026-001"
+                  <select
+                    value={selectedCaseId}
+                    onChange={(e) => setSelectedCaseId(e.target.value)}
+                    disabled={casesLoading || cases.length === 0}
                     style={{
                       width: '100%',
                       padding: '9px 12px',
@@ -406,7 +421,21 @@ export const EvidencePage: React.FC = () => {
                       boxSizing: 'border-box'
                     }}
                     required
-                  />
+                  >
+                    <option value="" disabled>
+                      {casesLoading ? 'Loading registered cases...' : cases.length === 0 ? 'No registered cases available' : 'Select a registered case'}
+                    </option>
+                    {cases.map((registeredCase) => (
+                      <option key={registeredCase.id} value={registeredCase.id}>
+                        {registeredCase.caseNumber} — {registeredCase.title}
+                      </option>
+                    ))}
+                  </select>
+                  {cases.length === 0 && !casesLoading && (
+                    <div style={{ fontSize: '11px', color: '#b91c1c', marginTop: '5px' }}>
+                      Register a case before adding evidence to the inventory.
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -509,7 +538,7 @@ export const EvidencePage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || casesLoading || cases.length === 0}
                   className="btn btn-primary"
                 >
                   {isSubmitting ? 'Logging...' : 'Register Evidence'}

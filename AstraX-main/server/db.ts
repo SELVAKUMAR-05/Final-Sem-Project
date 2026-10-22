@@ -18,7 +18,7 @@ import {
   UserRole
 } from '../src/types.ts';
 import { computeSha256, hashPassword } from './security.ts';
-import { addAuditLog } from './audit.ts';
+import { addAuditLog, getAuditLedgerSnapshot, restoreAuditLedger, setAuditLedgerChangeHandler } from './audit.ts';
 import { AIService } from './ai.ts';
 
 const STORAGE_DIR = path.resolve(process.cwd(), 'storage');
@@ -66,6 +66,179 @@ let nextTransferId = 1;
 let nextTimelineId = 1;
 let nextAlertId = 1;
 let nextNotificationId = 1;
+let persistenceEnabled = false;
+let registryRecoveredFromBackup = false;
+
+interface PersistedRegistry {
+  version: 2;
+  users: User[];
+  userPasswords: Array<[number, string]>;
+  cases: Case[];
+  documents: Array<Omit<LegalDocument, 'versions' | 'signatures' | 'aiMetadata'>>;
+  documentVersions: DocumentVersion[];
+  digitalSignatures: DigitalSignature[];
+  evidence: Evidence[];
+  evidenceTransfers: EvidenceTransfer[];
+  caseTimelineEvents: CaseTimelineEvent[];
+  securityAlerts: SecurityAlert[];
+  notifications: Notification[];
+  aiMetadata: AIDocumentMetadata[];
+  auditLogs: ReturnType<typeof getAuditLedgerSnapshot>;
+}
+
+const PERSISTED_REGISTRY_PATH = path.join(STORAGE_DIR, 'registry.json');
+type RegistryFile = Omit<Partial<PersistedRegistry>, 'version'> & { version?: 1 | 2 };
+
+function persistRegistry(): void {
+  if (!persistenceEnabled) return;
+  fs.mkdirSync(STORAGE_DIR, { recursive: true });
+  const registry: PersistedRegistry = {
+    version: 2,
+    users: db.users,
+    userPasswords: [...db.userPasswords.entries()],
+    cases: db.cases.map(({ documentCount: _documentCount, evidenceCount: _evidenceCount, ...caseRecord }) => caseRecord),
+    documents: db.documents.map(({ versions: _versions, signatures: _signatures, aiMetadata: _aiMetadata, ...document }) => document),
+    documentVersions: db.documentVersions,
+    digitalSignatures: db.digitalSignatures,
+    evidence: db.evidence,
+    evidenceTransfers: db.evidenceTransfers,
+    caseTimelineEvents: db.caseTimelineEvents,
+    securityAlerts: db.securityAlerts,
+    notifications: db.notifications,
+    aiMetadata: [...db.aiMetadataStore.values()],
+    auditLogs: getAuditLedgerSnapshot(),
+  };
+  const temporaryPath = `${PERSISTED_REGISTRY_PATH}.${process.pid}.tmp`;
+  const backupPath = `${PERSISTED_REGISTRY_PATH}.bak`;
+  const fileDescriptor = fs.openSync(temporaryPath, 'w');
+  try {
+    fs.writeFileSync(fileDescriptor, JSON.stringify(registry), 'utf-8');
+    fs.fsyncSync(fileDescriptor);
+  } finally {
+    fs.closeSync(fileDescriptor);
+  }
+  if (fs.existsSync(PERSISTED_REGISTRY_PATH) && !registryRecoveredFromBackup) {
+    fs.copyFileSync(PERSISTED_REGISTRY_PATH, backupPath);
+  }
+  try {
+    fs.renameSync(temporaryPath, PERSISTED_REGISTRY_PATH);
+    registryRecoveredFromBackup = false;
+  } catch (error) {
+    if (fs.existsSync(backupPath)) {
+      if (fs.existsSync(PERSISTED_REGISTRY_PATH)) {
+        fs.unlinkSync(PERSISTED_REGISTRY_PATH);
+      }
+      fs.renameSync(temporaryPath, PERSISTED_REGISTRY_PATH);
+      registryRecoveredFromBackup = false;
+      return;
+    }
+    throw error;
+  }
+}
+
+function restorePersistedRegistry(): void {
+  const backupPath = `${PERSISTED_REGISTRY_PATH}.bak`;
+  const candidates = [PERSISTED_REGISTRY_PATH, backupPath].filter((filePath) => fs.existsSync(filePath));
+  if (candidates.length === 0) return;
+
+  let registry: RegistryFile | undefined;
+  let registryError: unknown;
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(candidate, 'utf-8')) as RegistryFile;
+      if (
+        (parsed.version !== 1 && parsed.version !== 2) ||
+        !Array.isArray(parsed.cases) ||
+        !Array.isArray(parsed.documents) ||
+        !Array.isArray(parsed.documentVersions) ||
+        !Array.isArray(parsed.digitalSignatures) ||
+        !Array.isArray(parsed.caseTimelineEvents) ||
+        !Array.isArray(parsed.aiMetadata)
+      ) {
+        throw new Error(`Invalid persisted case registry: ${candidate}`);
+      }
+      registry = parsed;
+      if (candidate === backupPath) {
+        registryRecoveredFromBackup = true;
+        console.warn(`Recovered the case registry from backup: ${backupPath}`);
+      }
+      break;
+    } catch (error) {
+      registryError = error;
+    }
+  }
+  if (!registry) throw registryError;
+
+  for (const user of registry.users || []) {
+    const existingIndex = db.users.findIndex((existing) => existing.id === user.id);
+    if (existingIndex === -1) db.users.push(user);
+    else db.users[existingIndex] = user;
+  }
+  for (const [userId, passwordHash] of registry.userPasswords || []) {
+    db.userPasswords.set(userId, passwordHash);
+  }
+
+  for (const caseRecord of registry.cases) {
+    const existingIndex = db.cases.findIndex(
+      (existing) => existing.id === caseRecord.id || existing.caseNumber === caseRecord.caseNumber
+    );
+    if (existingIndex === -1) db.cases.push(caseRecord);
+    else db.cases[existingIndex] = caseRecord;
+  }
+
+  for (const document of registry.documents) {
+    if (!db.cases.some((caseRecord) => caseRecord.id === document.caseId)) {
+      throw new Error(`Persisted document ${document.id} references missing case ID ${document.caseId}`);
+    }
+    const existingIndex = db.documents.findIndex((existing) => existing.id === document.id);
+    if (existingIndex === -1) db.documents.push(document);
+    else db.documents[existingIndex] = document;
+  }
+
+  for (const version of registry.documentVersions) {
+    const existingIndex = db.documentVersions.findIndex((existing) => existing.id === version.id);
+    if (existingIndex === -1) db.documentVersions.push(version);
+    else db.documentVersions[existingIndex] = version;
+  }
+  for (const signature of registry.digitalSignatures) {
+    const existingIndex = db.digitalSignatures.findIndex((existing) => existing.id === signature.id);
+    if (existingIndex === -1) db.digitalSignatures.push(signature);
+    else db.digitalSignatures[existingIndex] = signature;
+  }
+  for (const event of registry.caseTimelineEvents) {
+    const existingIndex = db.caseTimelineEvents.findIndex((existing) => existing.id === event.id);
+    if (existingIndex === -1) db.caseTimelineEvents.push(event);
+    else db.caseTimelineEvents[existingIndex] = event;
+  }
+  for (const metadata of registry.aiMetadata) {
+    db.aiMetadataStore.set(metadata.documentId, metadata);
+  }
+  restoreArraySnapshot(db.evidence, registry.evidence);
+  restoreArraySnapshot(db.evidenceTransfers, registry.evidenceTransfers);
+  restoreArraySnapshot(db.securityAlerts, registry.securityAlerts);
+  restoreArraySnapshot(db.notifications, registry.notifications);
+  if (registry.auditLogs) restoreAuditLedger(registry.auditLogs);
+
+  nextCaseId = Math.max(nextCaseId, ...db.cases.map((caseRecord) => caseRecord.id + 1));
+  nextDocId = Math.max(nextDocId, ...db.documents.map((document) => document.id + 1));
+  nextVersionId = Math.max(nextVersionId, ...db.documentVersions.map((version) => version.id + 1));
+  nextSigId = Math.max(nextSigId, ...db.digitalSignatures.map((signature) => signature.id + 1));
+  nextTimelineId = Math.max(nextTimelineId, ...db.caseTimelineEvents.map((event) => event.id + 1));
+  nextUserId = Math.max(nextUserId, ...db.users.map((user) => user.id + 1));
+  nextEvidenceId = Math.max(nextEvidenceId, ...db.evidence.map((evidence) => evidence.id + 1));
+  nextTransferId = Math.max(nextTransferId, ...db.evidenceTransfers.map((transfer) => transfer.id + 1));
+  nextAlertId = Math.max(nextAlertId, ...db.securityAlerts.map((alert) => alert.id + 1));
+  nextNotificationId = Math.max(nextNotificationId, ...db.notifications.map((notification) => notification.id + 1));
+}
+
+function restoreArraySnapshot<T extends { id: number }>(destination: T[], snapshot?: T[]): void {
+  if (!snapshot) return;
+  destination.splice(0, destination.length, ...snapshot);
+}
+
+export function persistDatabase(): void {
+  persistRegistry();
+}
 
 export function getDb(): AppDatabase {
   return db;
@@ -850,6 +1023,11 @@ List of witnesses: 14. List of documentary exhibits: 28.`,
     ipAddress: '10.30.9.88',
     description: 'Forensic reception confirmed: SEAL-TN-92831 intact. Commenced forensic extraction.',
   });
+
+  restorePersistedRegistry();
+  persistenceEnabled = true;
+  setAuditLedgerChangeHandler(persistRegistry);
+  persistRegistry();
 }
 
 // ----------------------------------------------------------------------
@@ -867,7 +1045,11 @@ export function getEvidenceById(idOrEvidenceId: number | string): Evidence | und
   if (typeof idOrEvidenceId === 'number') {
     return db.evidence.find((e) => e.id === idOrEvidenceId);
   }
-  return db.evidence.find((e) => e.evidenceId === idOrEvidenceId || e.id.toString() === idOrEvidenceId);
+
+  const normalized = idOrEvidenceId.trim();
+  if (!normalized) return undefined;
+
+  return db.evidence.find((e) => e.evidenceId === normalized || e.id.toString() === normalized);
 }
 
 export function createEvidence(data: {
@@ -945,6 +1127,7 @@ export function createEvidence(data: {
     relatedEvidenceId: evidenceId,
   });
 
+  persistRegistry();
   return newEv;
 }
 
@@ -1004,6 +1187,7 @@ export function transferEvidence(data: {
     relatedEvidenceId: ev.evidenceId,
   });
 
+  persistRegistry();
   return transfer;
 }
 
@@ -1017,19 +1201,22 @@ export function receiveEvidence(data: {
   const ev = getEvidenceById(data.evidenceId);
   if (!ev) throw new Error(`Evidence ${data.evidenceId} not found`);
 
+  const previousCustodian = ev.currentCustodian;
+  const previousCustodianRole = ev.currentCustodianRole;
   const now = new Date().toISOString();
+
   ev.currentCustodian = data.receiverUser;
   ev.currentCustodianRole = data.receiverRole;
   ev.status = data.receiverRole === 'FORENSIC_OFFICER' ? 'UNDER_FORENSIC_EXAMINATION' : 'RECEIVED';
   ev.updatedAt = now;
 
-  // Record transfer log receipt
+  // Record transfer log receipt from the previous custodian to the receiving officer.
   const transfer: EvidenceTransfer = {
     id: nextTransferId++,
     evidenceId: ev.evidenceId,
     evidenceRecordId: ev.id,
-    fromUser: ev.currentCustodian,
-    fromRole: ev.currentCustodianRole,
+    fromUser: previousCustodian,
+    fromRole: previousCustodianRole,
     toUser: data.receiverUser,
     toRole: data.receiverRole,
     transferReason: `Custody receipt acknowledged. Seal status: ${data.verifiedSeal ? 'VERIFIED_INTACT' : 'FLAGGED'}. Notes: ${data.notes}`,
@@ -1043,6 +1230,7 @@ export function receiveEvidence(data: {
   };
   db.evidenceTransfers.push(transfer);
 
+  persistRegistry();
   return ev;
 }
 
@@ -1084,6 +1272,7 @@ export function toggleEvidenceTamper(evidenceId: string): { isTampered: boolean;
   if (!ev) throw new Error('Evidence not found');
 
   ev.isTampered = !ev.isTampered;
+  persistRegistry();
   return {
     isTampered: ev.isTampered,
     message: ev.isTampered
@@ -1119,6 +1308,7 @@ export function addCaseTimelineEvent(data: Omit<CaseTimelineEvent, 'id' | 'times
   };
 
   db.caseTimelineEvents.push(event);
+  persistRegistry();
   return event;
 }
 
@@ -1127,7 +1317,7 @@ export function addCaseTimelineEvent(data: Omit<CaseTimelineEvent, 'id' | 'times
 // ----------------------------------------------------------------------
 
 export function submitDocumentWorkflow(docId: number, user: { fullName: string; role: UserRole }): LegalDocument {
-  const doc = getDocumentById(docId);
+  const doc = db.documents.find((document) => document.id === docId);
   if (!doc) throw new Error('Document not found');
 
   doc.workflowStatus = 'SUBMITTED';
@@ -1157,7 +1347,7 @@ export function submitDocumentWorkflow(docId: number, user: { fullName: string; 
 }
 
 export function approveDocumentWorkflow(docId: number, user: { fullName: string; role: UserRole }): LegalDocument {
-  const doc = getDocumentById(docId);
+  const doc = db.documents.find((document) => document.id === docId);
   if (!doc) throw new Error('Document not found');
 
   doc.workflowStatus = 'APPROVED';
@@ -1187,7 +1377,7 @@ export function approveDocumentWorkflow(docId: number, user: { fullName: string;
 }
 
 export function rejectDocumentWorkflow(docId: number, user: { fullName: string; role: UserRole }, reason: string): LegalDocument {
-  const doc = getDocumentById(docId);
+  const doc = db.documents.find((document) => document.id === docId);
   if (!doc) throw new Error('Document not found');
   if (!reason || reason.trim().length === 0) {
     throw new Error('A valid rejection reason is required');
@@ -1209,7 +1399,7 @@ export function rejectDocumentWorkflow(docId: number, user: { fullName: string; 
 }
 
 export function finalizeDocumentWorkflow(docId: number, user: { fullName: string; role: UserRole }): LegalDocument {
-  const doc = getDocumentById(docId);
+  const doc = db.documents.find((document) => document.id === docId);
   if (!doc) throw new Error('Document not found');
 
   doc.workflowStatus = 'FINAL';
@@ -1264,6 +1454,7 @@ export function addSecurityAlert(data: Omit<SecurityAlert, 'id' | 'detectedAt' |
     relatedEvidenceId: data.relatedEvidenceId,
   });
 
+  persistRegistry();
   return alert;
 }
 
@@ -1271,6 +1462,7 @@ export function updateSecurityAlertStatus(id: number, status: SecurityAlert['sta
   const alert = db.securityAlerts.find((a) => a.id === id);
   if (alert) {
     alert.status = status;
+    persistRegistry();
   }
   return alert;
 }
@@ -1298,6 +1490,7 @@ export function addNotification(data: Omit<Notification, 'id' | 'createdAt' | 'r
     relatedEvidenceId: data.relatedEvidenceId,
   };
   db.notifications.unshift(notif);
+  persistRegistry();
   return notif;
 }
 
@@ -1305,6 +1498,7 @@ export function markNotificationRead(id: number): boolean {
   const notif = db.notifications.find((n) => n.id === id);
   if (notif) {
     notif.read = true;
+    persistRegistry();
     return true;
   }
   return false;
@@ -1316,6 +1510,7 @@ export function markAllNotificationsRead(userId: number): void {
       n.read = true;
     }
   }
+  persistRegistry();
 }
 
 // ----------------------------------------------------------------------
@@ -1609,7 +1804,10 @@ export function getWatermarkMetadata(doc: LegalDocument, user: { fullName: strin
 // ----------------------------------------------------------------------
 
 export function findUserByUsernameOrEmail(identifier: string): User | undefined {
-  const norm = identifier.trim().toLowerCase();
+  const value = typeof identifier === 'string' ? identifier.trim() : '';
+  if (!value) return undefined;
+
+  const norm = value.toLowerCase();
   return db.users.find((u) => u.username.toLowerCase() === norm || u.email.toLowerCase() === norm);
 }
 
@@ -1671,7 +1869,24 @@ export function createCase(data: Omit<Case, 'id' | 'createdAt' | 'updatedAt'>): 
     actorRole: 'POLICE_OFFICER',
   });
 
+  persistRegistry();
   return newCase;
+}
+
+export function updateCase(
+  id: number,
+  updates: Partial<Pick<Case, 'status' | 'priority' | 'investigatingOfficer'>>
+): Case | undefined {
+  const caseRecord = db.cases.find((item) => item.id === id);
+  if (!caseRecord) return undefined;
+  if (updates.status !== undefined) caseRecord.status = updates.status;
+  if (updates.priority !== undefined) caseRecord.priority = updates.priority;
+  if (updates.investigatingOfficer !== undefined) {
+    caseRecord.investigatingOfficer = updates.investigatingOfficer;
+  }
+  caseRecord.updatedAt = new Date().toISOString();
+  persistRegistry();
+  return getCaseById(id);
 }
 
 export function getAllDocuments(): LegalDocument[] {
@@ -1761,6 +1976,7 @@ export function createDocument(
     relatedDocumentId: newDoc.id,
   });
 
+  persistRegistry();
   return {
     ...newDoc,
     versions: [version],
@@ -1774,6 +1990,8 @@ export function addDocumentVersion(
   newStoredFilename: string,
   newHash: string,
   fileSize: number,
+  extractedText: string,
+  ocrExtracted: boolean,
   uploader: string,
   uploaderId: number,
   changeDescription: string
@@ -1787,6 +2005,8 @@ export function addDocumentVersion(
   doc.storedFilename = newStoredFilename;
   doc.sha256Hash = newHash;
   doc.fileSize = fileSize;
+  doc.extractedText = extractedText;
+  doc.ocrExtracted = ocrExtracted;
   doc.isTampered = false;
   doc.workflowStatus = 'UNDER_REVIEW';
   doc.updatedAt = new Date().toISOString();
@@ -1806,6 +2026,7 @@ export function addDocumentVersion(
   };
 
   db.documentVersions.push(version);
+  persistRegistry();
   return version;
 }
 
@@ -1848,6 +2069,7 @@ export function signDocument(
     relatedDocumentId: doc.id,
   });
 
+  persistRegistry();
   return sig;
 }
 
@@ -1909,6 +2131,7 @@ export function toggleTamperSimulation(docId: number): { isTampered: boolean; me
   if (!doc) throw new Error('Document not found');
 
   doc.isTampered = !doc.isTampered;
+  persistRegistry();
   
   if (doc.isTampered) {
     try {

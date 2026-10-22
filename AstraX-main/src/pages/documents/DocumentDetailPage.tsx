@@ -872,7 +872,7 @@ export const DocumentDetailPage: React.FC = () => {
                       <span style={{ color: '#475569' }}>{log.description}</span>
                     </div>
                     <div style={{ color: '#64748b', fontFamily: 'monospace' }}>
-                      {new Date(log.timestamp).toLocaleString()}
+                      {new Date(log.createdAt).toLocaleString()}
                     </div>
                   </div>
                 ))}
