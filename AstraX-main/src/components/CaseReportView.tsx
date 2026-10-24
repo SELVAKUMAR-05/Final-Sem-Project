@@ -46,22 +46,63 @@ export const CaseReportView: React.FC = () => {
     if (selectedCaseId) loadReport(selectedCaseId);
   }, [selectedCaseId]);
 
-  useEffect(() => {
-    const preparePrint = () => document.body.classList.add('printing-case-report');
-    const finishPrint = () => document.body.classList.remove('printing-case-report');
-
-    window.addEventListener('beforeprint', preparePrint);
-    window.addEventListener('afterprint', finishPrint);
-
-    return () => {
-      window.removeEventListener('beforeprint', preparePrint);
-      window.removeEventListener('afterprint', finishPrint);
-      finishPrint();
-    };
-  }, []);
-
   const handlePrint = () => {
-    window.print();
+    const reportElement = document.getElementById('case-report-document');
+    if (!reportElement) {
+      console.error('Cannot print the Section 65B report because its document is not available.');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      window.alert('Allow pop-ups for this site to print the Section 65B report.');
+      return;
+    }
+
+    const printDocument = printWindow.document;
+    printDocument.open();
+    printDocument.write(
+      '<!doctype html><html><head><meta charset="utf-8"><title>Section 65B Case Report</title></head><body class="printing-case-report"></body></html>',
+    );
+    printDocument.close();
+
+    const stylesheetLoads: Promise<void>[] = [];
+    document
+      .querySelectorAll<HTMLLinkElement | HTMLStyleElement>('link[rel="stylesheet"], style')
+      .forEach((stylesheet) => {
+        if (stylesheet instanceof HTMLLinkElement) {
+          const copy = stylesheet.cloneNode(true) as HTMLLinkElement;
+          copy.href = stylesheet.href;
+          stylesheetLoads.push(
+            new Promise<void>((resolve, reject) => {
+              copy.addEventListener('load', () => resolve(), { once: true });
+              copy.addEventListener(
+                'error',
+                () => reject(new Error(`Failed to load report print stylesheet: ${copy.href}`)),
+                { once: true },
+              );
+            }),
+          );
+          printDocument.head.appendChild(copy);
+        } else {
+          printDocument.head.appendChild(stylesheet.cloneNode(true));
+        }
+      });
+
+    printDocument.body.appendChild(reportElement.cloneNode(true));
+
+    void Promise.all(stylesheetLoads)
+      .then(() => printDocument.fonts.ready)
+      .then(() => {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+      })
+      .catch((error: unknown) => {
+        console.error('Failed to prepare the Section 65B report for printing.', error);
+        printWindow.close();
+        window.alert('The Section 65B report could not be prepared for printing. Check the app stylesheets and try again.');
+      });
   };
 
   return (

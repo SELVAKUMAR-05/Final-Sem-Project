@@ -1316,7 +1316,7 @@ body {
   }
 }
 
-@page case-report {
+@page {
   size: A4 portrait;
   margin: 8mm;
 }
@@ -1329,6 +1329,7 @@ body {
     background: #ffffff !important;
   }
 
+  body.printing-case-report .app-shell,
   body.printing-case-report #root > div {
     display: block !important;
     min-height: 0 !important;
@@ -1336,11 +1337,20 @@ body {
     background: #ffffff !important;
   }
 
+  body.printing-case-report .app-body {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   body.printing-case-report header,
   body.printing-case-report aside,
   body.printing-case-report footer,
   body.printing-case-report #case-report-view > .page-header,
-  body.printing-case-report #case-report-view > button {
+  body.printing-case-report #case-report-view > button,
+  body.printing-case-report .app-shell > button[style*="position: fixed"],
+  body.printing-case-report .app-shell > div[style*="position: fixed"] {
     display: none !important;
   }
 
@@ -1362,10 +1372,11 @@ body {
     color: #0f172a !important;
     font-family: Arial, Helvetica, sans-serif !important;
     font-size: 9pt !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
   }
 
   body.printing-case-report #case-report-document {
-    page: case-report;
     width: 100% !important;
     max-width: none !important;
     padding: 0 !important;
@@ -1375,6 +1386,8 @@ body {
     box-shadow: none !important;
     overflow: visible !important;
     background: #ffffff !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
   }
 
   body.printing-case-report #case-report-document * {
@@ -1383,14 +1396,22 @@ body {
     print-color-adjust: exact;
   }
 
-  body.printing-case-report #case-report-document [style*="display: flex"],
+  body.printing-case-report #case-report-document [style*="display: flex"] {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
   body.printing-case-report #case-report-document [style*="display: grid"] {
-    display: block !important;
-    gap: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
   }
 
   body.printing-case-report #case-report-document > div {
     margin-bottom: 10px !important;
+    break-before: auto !important;
+    page-break-before: auto !important;
   }
 
   body.printing-case-report #case-report-document > div:last-child {
@@ -1433,7 +1454,7 @@ body {
 
   body.printing-case-report #case-report-document .gov-table {
     width: 100% !important;
-    table-layout: fixed !important;
+    table-layout: auto !important;
     font-size: 7pt !important;
     break-inside: auto !important;
     page-break-inside: auto !important;
@@ -1451,8 +1472,8 @@ body {
   }
 
   body.printing-case-report #case-report-document .gov-table tr {
-    break-inside: auto !important;
-    page-break-inside: auto !important;
+    break-inside: avoid-page !important;
+    page-break-inside: avoid !important;
   }
 
   body.printing-case-report #case-report-document .gov-table-container {

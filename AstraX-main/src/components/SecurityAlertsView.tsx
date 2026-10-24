@@ -220,7 +220,7 @@ export const SecurityAlertsView: React.FC = () => {
                     </td>
                     <td>
                       <span className="timeline-time">
-                        {new Date(a.createdAt).toLocaleString()}
+                        {new Date(a.detectedAt).toLocaleString()}
                       </span>
                     </td>
                     <td>{getStatusBadge(a.status)}</td>

@@ -963,7 +963,7 @@ export const CaseDetailPage: React.FC = () => {
                       </p>
 
                       <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '10px' }}>
-                        Recorded by Officer ID #{evt.createdById || 'System'}
+                        Recorded by {evt.actor || 'System'}
                       </div>
                     </div>
                   </div>
@@ -1038,7 +1038,7 @@ export const CaseDetailPage: React.FC = () => {
       {/* Global Modals for Actions */}
       {showUploadDocModal && (
         <DocumentUploadModal
-          preselectedCaseNumber={caseData.caseNumber}
+          preselectedCaseId={caseData.id}
           onClose={() => setShowUploadDocModal(false)}
           onSuccess={() => {
             setShowUploadDocModal(false);

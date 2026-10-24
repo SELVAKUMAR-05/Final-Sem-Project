@@ -47,10 +47,11 @@ export const AuditLogsPage: React.FC = () => {
   }, []);
 
   const filteredLogs = logs.filter((log) => {
+    const targetId = log.documentId?.toString() ?? log.caseId?.toString() ?? log.evidenceId ?? '';
     const matchesSearch =
       log.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.entityId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      targetId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.ipAddress?.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -66,8 +67,8 @@ export const AuditLogsPage: React.FC = () => {
   );
 
   const totalEvents = logs.length;
-  const securityWarnings = logs.filter((l) => l.status === 'FAILURE' || l.action === 'TAMPER_DETECTED').length;
-  const verifiedHashes = logs.filter((l) => l.hashChainValid || l.status === 'SUCCESS').length;
+  const securityWarnings = logs.filter((l) => l.status === 'DENIED' || l.status === 'FLAGGED' || l.action === 'TAMPER_SIMULATION').length;
+  const verifiedHashes = logs.filter((l) => Boolean(l.currentLogHash)).length;
 
   return (
     <div>
@@ -283,13 +284,13 @@ export const AuditLogsPage: React.FC = () => {
                         fontSize: '11px',
                         fontWeight: 700,
                         background:
-                          log.action === 'TAMPER_DETECTED'
+                          log.action === 'TAMPER_SIMULATION'
                             ? '#fee2e2'
                             : log.action.includes('SIGN') || log.action.includes('APPROVE')
                             ? '#ecfdf5'
                             : '#eff6ff',
                         color:
-                          log.action === 'TAMPER_DETECTED'
+                          log.action === 'TAMPER_SIMULATION'
                             ? '#991b1b'
                             : log.action.includes('SIGN') || log.action.includes('APPROVE')
                             ? '#065f46'
@@ -301,9 +302,9 @@ export const AuditLogsPage: React.FC = () => {
                   </td>
                   <td style={{ padding: '12px 16px' }}>
                     <div style={{ color: '#0f172a', fontWeight: 500 }}>{log.description}</div>
-                    {log.entityId && (
+                    {(log.documentId || log.caseId || log.evidenceId) && (
                       <div style={{ fontSize: '11px', color: '#64748b', fontFamily: "'JetBrains Mono', monospace" }}>
-                        Target: {log.entityType || 'Entity'} #{log.entityId}
+                        Target: {log.documentId ? `Document #${log.documentId}` : log.caseId ? `Case #${log.caseId}` : `Evidence ${log.evidenceId}`}
                       </div>
                     )}
                   </td>
@@ -325,8 +326,8 @@ export const AuditLogsPage: React.FC = () => {
                     </span>
                   </td>
                   <td style={{ padding: '12px 16px', fontFamily: "'JetBrains Mono', monospace", fontSize: '11px', color: '#94a3b8' }}>
-                    <span title={log.currentHash || log.previousHash || 'SHA-256 Chain Block'}>
-                      {(log.currentHash || '7f83b1657ff1fc53b92dc18148a1d65d').substring(0, 12)}...
+                    <span title={log.currentLogHash || log.previousLogHash || 'SHA-256 Chain Block'}>
+                      {(log.currentLogHash || 'No hash recorded').substring(0, 12)}...
                     </span>
                   </td>
                 </tr>

@@ -101,7 +101,7 @@ export const HackathonDemoGuide: React.FC<HackathonDemoGuideProps> = ({ setActiv
       actionText: 'View Audit Trail (Admin/Court)',
       onAction: async () => {
         await switchRoleShortcut('ADMIN');
-        setActiveTab('audit-logs');
+        setActiveTab('audit_chain');
       },
       tag: 'Section 10',
     },

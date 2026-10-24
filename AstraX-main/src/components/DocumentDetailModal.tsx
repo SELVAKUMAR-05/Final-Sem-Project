@@ -248,7 +248,7 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                       <span className="badge-status encrypted">
                         🔵 {doc.encryptionAlgorithm}
                       </span>
-                      {doc.isSigned && (
+                      {doc.signed && (
                         <span className="badge-status signed">
                           🟣 SIGNED
                         </span>
@@ -299,16 +299,16 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                     <ShieldCheck size={16} color="#1d4ed8" />
                     Document Lifecycle &amp; Evidentiary Approval
                   </h3>
-                  <span className={`badge-status ${doc.workflowStatus === 'APPROVED' || doc.workflowStatus === 'FINALIZED' ? 'valid' : doc.workflowStatus === 'REJECTED' ? 'tampered' : 'under-review'}`}>
-                    {doc.workflowStatus === 'APPROVED' ? '🟢 APPROVED' : doc.workflowStatus === 'FINALIZED' ? '🟢 FINALIZED' : doc.workflowStatus === 'REJECTED' ? '🔴 REJECTED' : '🟠 UNDER REVIEW'}
+                  <span className={`badge-status ${doc.workflowStatus === 'APPROVED' || doc.workflowStatus === 'FINAL' ? 'valid' : doc.workflowStatus === 'REJECTED' ? 'tampered' : 'under-review'}`}>
+                    {doc.workflowStatus === 'APPROVED' ? '🟢 APPROVED' : doc.workflowStatus === 'FINAL' ? '🟢 FINAL' : doc.workflowStatus === 'REJECTED' ? '🔴 REJECTED' : '🟠 UNDER REVIEW'}
                   </span>
                 </div>
                 <div className="gov-card-body">
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '20px' }}>
-                    {['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'FINALIZED'].map((st, idx) => {
+                    {(['DRAFT', 'UNDER_REVIEW', 'APPROVED', 'FINAL'] as const).map((st, idx) => {
                       const isPast =
                         st === doc.workflowStatus ||
-                        (doc.workflowStatus === 'FINALIZED' && st !== 'REJECTED') ||
+                        (doc.workflowStatus === 'FINAL') ||
                         (doc.workflowStatus === 'APPROVED' && (st === 'DRAFT' || st === 'UNDER_REVIEW'));
                       return (
                         <div
@@ -356,13 +356,13 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                       </button>
                     )}
 
-                    {!doc.isSigned && canSignDocuments && (
+                    {!doc.signed && canSignDocuments && (
                       <button className="btn btn-warning" onClick={handleSign}>
                         <FileSignature size={14} />
                         Apply PKI Digital Signature
                       </button>
                     )}
-                    {!doc.isSigned && !canSignDocuments && (
+                    {!doc.signed && !canSignDocuments && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#9a3412', fontSize: '12px', fontWeight: 600 }}>
                         <Lock size={14} /> Signature requires an authorized officer
                       </span>
@@ -498,8 +498,8 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                 <div><strong>Document Type:</strong> {doc.documentType}</div>
                 <div><strong>Classification:</strong> {doc.classification}</div>
                 <div><strong>File Size:</strong> {(doc.fileSize / 1024).toFixed(1)} KB</div>
-                <div><strong>Uploader:</strong> {doc.uploadedBy} ({doc.uploaderRole})</div>
-                <div><strong>Upload Date:</strong> {new Date(doc.uploadedAt).toLocaleString()}</div>
+                <div><strong>Uploader:</strong> {doc.uploadedBy}</div>
+                <div><strong>Upload Date:</strong> {new Date(doc.createdAt).toLocaleString()}</div>
               </div>
               <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                 <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
@@ -520,8 +520,8 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                 {doc.versions?.map((v) => (
                   <div key={v.id} style={{ background: '#f8fafc', padding: '12px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <strong>Version v{v.version}</strong>
-                      <span className="timeline-time">{new Date(v.uploadedAt).toLocaleString()}</span>
+                      <strong>Version v{v.versionNumber}</strong>
+                      <span className="timeline-time">{new Date(v.createdAt).toLocaleString()}</span>
                     </div>
                     <div style={{ fontSize: '12px', color: '#475569', margin: '4px 0' }}>{v.changeDescription}</div>
                     <div className="mono-hash" style={{ width: '100%' }}>{v.sha256Hash}</div>
@@ -536,14 +536,14 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h4 style={{ fontSize: '14px', color: '#0b2545' }}>PKI Digital Signatures</h4>
-                {!doc.isSigned && canSignDocuments && (
+                {!doc.signed && canSignDocuments && (
                   <button className="btn btn-primary btn-sm" onClick={handleSign}>
                     <FileSignature size={13} />
                     Sign Document
                   </button>
                 )}
               </div>
-              {!doc.isSigned && !canSignDocuments && (
+              {!doc.signed && !canSignDocuments && (
                 <div role="status" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#fff7ed', border: '1px solid #fed7aa', color: '#9a3412', fontSize: '12px' }}>
                   <Lock size={15} />
                   Your {currentUser?.role} role can review this signature record but cannot sign documents.
@@ -553,14 +553,14 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                 doc.signatures.map((s, idx) => (
                   <div key={idx} style={{ background: '#faf5ff', border: '1px solid #e9d5ff', padding: '14px', borderRadius: '6px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <strong>{s.signedBy} ({s.signedByRole})</strong>
+                      <strong>{s.signedBy} ({s.signerRole})</strong>
                       <span className="badge-status signed" style={{ fontSize: '10px' }}>🟣 SIGNED</span>
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
                       Timestamp: {new Date(s.signedAt).toLocaleString()}
                     </div>
                     <div className="mono-hash" style={{ marginTop: '6px', width: '100%' }}>
-                      CERT: {s.certificateHash}
+                      CERT ISSUER: {s.certificateIssuer}
                     </div>
                   </div>
                 ))

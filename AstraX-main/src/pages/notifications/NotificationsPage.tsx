@@ -45,7 +45,7 @@ export const NotificationsPage: React.FC = () => {
     try {
       await api.markNotificationRead(id);
       setNotifications(
-        notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+        notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
       );
       showToast('Notification marked as read', 'info');
     } catch (err) {
@@ -56,7 +56,7 @@ export const NotificationsPage: React.FC = () => {
   const handleMarkAllRead = async () => {
     try {
       await api.markAllNotificationsRead();
-      setNotifications(notifications.map((n) => ({ ...n, isRead: true })));
+      setNotifications(notifications.map((n) => ({ ...n, read: true })));
       showToast('All notifications marked as read', 'success');
     } catch (err) {
       console.error(err);
@@ -64,13 +64,13 @@ export const NotificationsPage: React.FC = () => {
   };
 
   const filteredNotifications = notifications.filter((n) => {
-    if (filterType === 'UNREAD') return !n.isRead;
+    if (filterType === 'UNREAD') return !n.read;
     if (filterType === 'TAMPER') return n.type.includes('TAMPER');
     if (filterType === 'WORKFLOW') return n.type.includes('WORKFLOW') || n.type.includes('APPROV');
     return true;
   });
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <div>
@@ -191,10 +191,10 @@ export const NotificationsPage: React.FC = () => {
               <div
                 key={notif.id}
                 style={{
-                  background: notif.isRead ? '#ffffff' : isAlert ? '#fef2f2' : '#f0f9ff',
+                  background: notif.read ? '#ffffff' : isAlert ? '#fef2f2' : '#f0f9ff',
                   border: isAlert
                     ? '1px solid #fecaca'
-                    : notif.isRead
+                    : notif.read
                     ? '1px solid #e2e8f0'
                     : '1px solid #bae6fd',
                   borderRadius: '10px',
@@ -230,7 +230,7 @@ export const NotificationsPage: React.FC = () => {
                       >
                         {notif.title}
                       </span>
-                      {!notif.isRead && (
+                      {!notif.read && (
                         <span
                           style={{
                             width: '8px',
@@ -254,7 +254,7 @@ export const NotificationsPage: React.FC = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {!notif.isRead && (
+                  {!notif.read && (
                     <button
                       onClick={() => handleMarkAsRead(notif.id)}
                       className="btn btn-secondary"
@@ -264,9 +264,9 @@ export const NotificationsPage: React.FC = () => {
                     </button>
                   )}
 
-                  {notif.entityType === 'CASE' && notif.entityId && (
+                  {notif.relatedCaseId && (
                     <button
-                      onClick={() => navigate(`/cases/${notif.entityId}`)}
+                      onClick={() => navigate(`/cases/${notif.relatedCaseId}`)}
                       className="btn btn-primary"
                       style={{ fontSize: '11px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
@@ -275,9 +275,9 @@ export const NotificationsPage: React.FC = () => {
                     </button>
                   )}
 
-                  {notif.entityType === 'DOCUMENT' && notif.entityId && (
+                  {notif.relatedDocumentId && (
                     <button
-                      onClick={() => navigate(`/documents/${notif.entityId}`)}
+                      onClick={() => navigate(`/documents/${notif.relatedDocumentId}`)}
                       className="btn btn-primary"
                       style={{ fontSize: '11px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >
@@ -286,9 +286,9 @@ export const NotificationsPage: React.FC = () => {
                     </button>
                   )}
 
-                  {notif.entityType === 'EVIDENCE' && notif.entityId && (
+                  {notif.relatedEvidenceId && (
                     <button
-                      onClick={() => navigate(`/evidence/${notif.entityId}`)}
+                      onClick={() => navigate(`/evidence/${notif.relatedEvidenceId}`)}
                       className="btn btn-primary"
                       style={{ fontSize: '11px', padding: '6px 10px', display: 'flex', alignItems: 'center', gap: '4px' }}
                     >

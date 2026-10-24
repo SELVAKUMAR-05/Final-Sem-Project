@@ -322,7 +322,7 @@ export const EvidenceDetailPage: React.FC = () => {
                   REGISTRATION DATE &amp; TIME
                 </div>
                 <div style={{ color: '#0f172a', fontWeight: 600, marginTop: '2px' }}>
-                  {new Date(evidence.collectionDate).toLocaleString()}
+                  {new Date(evidence.collectionDateTime).toLocaleString()}
                 </div>
               </div>
 

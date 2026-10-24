@@ -42,18 +42,27 @@ export const AuditLogsView: React.FC = () => {
 
   const handleExportCSV = () => {
     const headers = ['ID', 'Timestamp', 'User', 'Role', 'Action', 'Target Type', 'Target ID', 'Status', 'IP Address', 'Description'];
-    const rows = logs.map(l => [
-      l.id,
-      new Date(l.createdAt).toISOString(),
-      `"${l.username}"`,
-      l.role,
-      l.action,
-      l.targetType || '',
-      l.targetId || '',
-      l.status,
-      l.ipAddress,
-      `"${l.description.replace(/"/g, '""')}"`,
-    ]);
+    const rows = logs.map((l) => {
+      const target = l.documentId
+        ? ['DOCUMENT', l.documentId]
+        : l.caseId
+          ? ['CASE', l.caseId]
+          : l.evidenceId
+            ? ['EVIDENCE', l.evidenceId]
+            : ['', ''];
+      return [
+        l.id,
+        new Date(l.createdAt).toISOString(),
+        `"${l.username}"`,
+        l.role,
+        l.action,
+        target[0],
+        target[1],
+        l.status,
+        l.ipAddress,
+        `"${l.description.replace(/"/g, '""')}"`,
+      ];
+    });
 
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });

@@ -159,7 +159,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, onSelectCase
             <div className="gov-card">
               <div className="gov-card-header">
                 <span className="gov-card-title"><ShieldCheck size={18} /> Recent Security &amp; Audit Logs</span>
-                <button className="btn-gov btn-gov-outline btn-gov-sm" onClick={() => setActiveTab('audit-logs')}>Full Trail</button>
+                <button className="btn-gov btn-gov-outline btn-gov-sm" onClick={() => setActiveTab('audit_chain')}>Full Trail</button>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {stats.recentActivities.slice(0, 4).map((act) => (

@@ -221,7 +221,7 @@ export const EvidenceChainView: React.FC<EvidenceChainViewProps> = ({ initialEvi
                     <div className="timeline-header">
                       <h4>Initial Evidence Seizure &amp; Tamper Seal Applied</h4>
                       <span className="timeline-time">
-                        {new Date(chainData.evidence.collectedAt).toLocaleString()}
+                        {new Date(chainData.evidence.collectionDateTime).toLocaleString()}
                       </span>
                     </div>
                     <div className="timeline-actor">
@@ -254,11 +254,11 @@ export const EvidenceChainView: React.FC<EvidenceChainViewProps> = ({ initialEvi
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <h4 style={{ color: '#0b2545' }}>Custodial Transfer Handoff</h4>
                           <span className="badge-pill" style={{ fontSize: '10px', background: '#eff6ff', color: '#1d4ed8' }}>
-                            Transfer #{t.transferId}
+                            Transfer #{t.id}
                           </span>
                         </div>
                         <span className="timeline-time">
-                          {new Date(t.timestamp).toLocaleString()}
+                          {new Date(t.transferDateTime).toLocaleString()}
                         </span>
                       </div>
 
@@ -296,7 +296,7 @@ export const EvidenceChainView: React.FC<EvidenceChainViewProps> = ({ initialEvi
                           <span className="mono-hash">{t.signature}</span>
                         </div>
                         <span style={{ fontSize: '11px', color: '#64748b' }}>
-                          Verified Seal: {t.verifiedSeal ? '🟢 Intact' : '🔴 Compromised'}
+                          Transfer Status: {t.status}
                         </span>
                       </div>
                     </div>

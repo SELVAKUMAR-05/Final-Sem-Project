@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onNavigate }) => {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <span style={{ fontWeight: 700, fontSize: '12px', color: '#0b2545' }}>{n.title}</span>
                               <span style={{ fontSize: '10px', color: '#94a3b8' }}>
-                                {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </span>
                             </div>
                             <p style={{ fontSize: '11px', color: '#475569', lineHeight: 1.4 }}>{n.message}</p>

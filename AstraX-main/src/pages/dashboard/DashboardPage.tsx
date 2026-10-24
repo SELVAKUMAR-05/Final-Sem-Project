@@ -195,7 +195,7 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
           <div style={{ fontSize: '28px', fontWeight: 800, color: '#0f172a', margin: '8px 0 2px 0' }}>
-            {stats?.activeCases ?? recentCases.length}
+            {stats?.activeInvestigations ?? recentCases.length}
           </div>
           <div style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span>View all dockets</span>
