@@ -65,8 +65,18 @@ export const DocumentsView: React.FC<DocumentsViewProps> = ({ onGoToIntegrity, i
     }
   };
 
-  const handleDownload = (docId: number) => {
-    window.open(api.getDownloadUrl(docId), '_blank');
+  const handleDownload = async (docId: number) => {
+    try {
+      await api.downloadDocument(docId);
+    } catch (err: any) {
+      if (err.status === 403) {
+        const msg = err.message || `Role "${currentUser?.role}" is not authorized to download this document.`;
+        setUnauthorizedModalMsg(msg);
+        setUnauthorizedAlert(msg);
+      } else {
+        alert(err.message || 'Document download failed');
+      }
+    }
   };
 
   const filteredDocs = documents.filter((d) => {

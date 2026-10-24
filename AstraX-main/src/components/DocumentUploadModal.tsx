@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { api } from '../services/api.ts';
 import { Case, DocumentType } from '../types.ts';
+import { UPLOADABLE_DOCUMENT_TYPES } from '../documentPermissions.ts';
 import {
   UploadCloud,
   FileText,
@@ -11,6 +12,20 @@ import {
   X,
   Lock,
 } from 'lucide-react';
+
+const DOCUMENT_TYPE_OPTIONS: { value: DocumentType; label: string }[] = [
+  { value: 'FIR', label: 'FIR (First Information Report)' },
+  { value: 'POLICE_REPORT', label: 'Police Report' },
+  { value: 'INVESTIGATION_REPORT', label: 'Investigation Report' },
+  { value: 'WITNESS_STATEMENT', label: 'Witness Statement (Sec 161 CrPC)' },
+  { value: 'CHARGE_SHEET', label: 'Charge Sheet (Sec 173 CrPC)' },
+  { value: 'COURT_FILING', label: 'Court Filing / Motion' },
+  { value: 'EVIDENCE', label: 'Evidence Exhibit' },
+  { value: 'FORENSIC_REPORT', label: 'CFSL Forensic Lab Report' },
+  { value: 'LEGAL_NOTICE', label: 'Legal Notice' },
+  { value: 'JUDGMENT', label: 'Court Judgment / Order' },
+  { value: 'OTHER', label: 'Other Official Document' },
+];
 
 interface DocumentUploadModalProps {
   onClose: () => void;
@@ -24,16 +39,23 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
   preselectedCaseId,
 }) => {
   const { currentUser } = useAuth();
+  const allowedDocumentTypes = currentUser ? UPLOADABLE_DOCUMENT_TYPES[currentUser.role] : [];
   const [cases, setCases] = useState<Case[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<number | ''>(preselectedCaseId || '');
   const [documentName, setDocumentName] = useState<string>('');
-  const [documentType, setDocumentType] = useState<DocumentType>('FIR');
+  const [documentType, setDocumentType] = useState<DocumentType | ''>(allowedDocumentTypes[0] ?? '');
   const [classification, setClassification] = useState<'RESTRICTED' | 'CONFIDENTIAL' | 'PUBLIC_RECORD'>('RESTRICTED');
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!documentType || !allowedDocumentTypes.includes(documentType)) {
+      setDocumentType(allowedDocumentTypes[0] ?? '');
+    }
+  }, [allowedDocumentTypes, documentType]);
 
   useEffect(() => {
     async function loadCases() {
@@ -92,6 +114,10 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!documentType || !allowedDocumentTypes.includes(documentType)) {
+      setErrorMsg('Your role is not authorized to upload this document category.');
+      return;
+    }
     if (!file || !selectedCaseId || !documentName) {
       setErrorMsg('Please select a file, target case, and document title.');
       return;
@@ -194,18 +220,13 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
                   className="form-select"
                   value={documentType}
                   onChange={(e) => setDocumentType(e.target.value as DocumentType)}
+                  required
                 >
-                  <option value="FIR">FIR (First Information Report)</option>
-                  <option value="POLICE_REPORT">Police Report</option>
-                  <option value="INVESTIGATION_REPORT">Investigation Report</option>
-                  <option value="WITNESS_STATEMENT">Witness Statement (Sec 161 CrPC)</option>
-                  <option value="CHARGE_SHEET">Charge Sheet (Sec 173 CrPC)</option>
-                  <option value="COURT_FILING">Court Filing / Motion</option>
-                  <option value="EVIDENCE">Evidence Exhibit</option>
-                  <option value="FORENSIC_REPORT">CFSL Forensic Lab Report</option>
-                  <option value="LEGAL_NOTICE">Legal Notice</option>
-                  <option value="JUDGMENT">Court Judgment / Order</option>
-                  <option value="OTHER">Other Official Document</option>
+                  {DOCUMENT_TYPE_OPTIONS
+                    .filter(({ value }) => allowedDocumentTypes.includes(value))
+                    .map(({ value, label }) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
                 </select>
               </div>
 

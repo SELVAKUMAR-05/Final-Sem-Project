@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { UserRole, DocumentType } from '../src/types.ts';
+import { UPLOADABLE_DOCUMENT_TYPES } from '../src/documentPermissions.ts';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'ncrb-secure-legal-dms-mha-secret-key-2026';
 const ENCRYPTION_KEY = process.env.DOCUMENT_ENCRYPTION_KEY || 'ncrb-aes256-evidence-enc-key-32b!'; // 32 chars
@@ -78,11 +79,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canViewAllCases: true,
     canManageUsers: true,
     canViewAuditLogs: true,
-    canUploadDocTypes: [
-      'FIR', 'POLICE_REPORT', 'INVESTIGATION_REPORT', 'WITNESS_STATEMENT',
-      'CHARGE_SHEET', 'COURT_FILING', 'EVIDENCE', 'FORENSIC_REPORT',
-      'LEGAL_NOTICE', 'JUDGMENT', 'OTHER'
-    ],
+    canUploadDocTypes: UPLOADABLE_DOCUMENT_TYPES.ADMIN,
     canViewDocTypes: 'ALL',
     canSignDocuments: true,
     canVerifyIntegrity: true,
@@ -92,7 +89,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canViewAllCases: false, // only assigned or standard
     canManageUsers: false,
     canViewAuditLogs: false,
-    canUploadDocTypes: ['FIR', 'POLICE_REPORT', 'WITNESS_STATEMENT', 'EVIDENCE', 'OTHER'],
+    canUploadDocTypes: UPLOADABLE_DOCUMENT_TYPES.POLICE_OFFICER,
     canViewDocTypes: ['FIR', 'POLICE_REPORT', 'INVESTIGATION_REPORT', 'WITNESS_STATEMENT', 'CHARGE_SHEET', 'EVIDENCE', 'FORENSIC_REPORT', 'LEGAL_NOTICE', 'OTHER'],
     canSignDocuments: true,
     canVerifyIntegrity: true,
@@ -102,7 +99,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canViewAllCases: false,
     canManageUsers: false,
     canViewAuditLogs: false,
-    canUploadDocTypes: ['INVESTIGATION_REPORT', 'WITNESS_STATEMENT', 'CHARGE_SHEET', 'EVIDENCE', 'POLICE_REPORT', 'OTHER'],
+    canUploadDocTypes: UPLOADABLE_DOCUMENT_TYPES.INVESTIGATION_OFFICER,
     canViewDocTypes: ['FIR', 'POLICE_REPORT', 'INVESTIGATION_REPORT', 'WITNESS_STATEMENT', 'CHARGE_SHEET', 'EVIDENCE', 'FORENSIC_REPORT', 'COURT_FILING', 'LEGAL_NOTICE', 'JUDGMENT', 'OTHER'],
     canSignDocuments: true,
     canVerifyIntegrity: true,
@@ -112,7 +109,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canViewAllCases: false,
     canManageUsers: false,
     canViewAuditLogs: false,
-    canUploadDocTypes: ['FORENSIC_REPORT', 'EVIDENCE', 'OTHER'],
+    canUploadDocTypes: UPLOADABLE_DOCUMENT_TYPES.FORENSIC_OFFICER,
     canViewDocTypes: ['FIR', 'EVIDENCE', 'FORENSIC_REPORT', 'POLICE_REPORT', 'INVESTIGATION_REPORT', 'OTHER'],
     canSignDocuments: true,
     canVerifyIntegrity: true,
@@ -122,7 +119,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canViewAllCases: false,
     canManageUsers: false,
     canViewAuditLogs: false,
-    canUploadDocTypes: ['LEGAL_NOTICE', 'COURT_FILING', 'OTHER'],
+    canUploadDocTypes: UPLOADABLE_DOCUMENT_TYPES.LAWYER,
     // Lawyer CANNOT view raw internal POLICE_REPORT, classified EVIDENCE, or unfiled INVESTIGATION_REPORT
     canViewDocTypes: ['FIR', 'CHARGE_SHEET', 'COURT_FILING', 'LEGAL_NOTICE', 'JUDGMENT', 'OTHER'],
     canSignDocuments: false,
@@ -133,7 +130,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, {
     canViewAllCases: true,
     canManageUsers: false,
     canViewAuditLogs: false,
-    canUploadDocTypes: ['COURT_FILING', 'JUDGMENT', 'LEGAL_NOTICE', 'CHARGE_SHEET', 'OTHER'],
+    canUploadDocTypes: UPLOADABLE_DOCUMENT_TYPES.COURT_OFFICER,
     canViewDocTypes: 'ALL',
     canSignDocuments: true,
     canVerifyIntegrity: true,

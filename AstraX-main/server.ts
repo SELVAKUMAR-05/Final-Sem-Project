@@ -70,6 +70,7 @@ import {
 } from './server/security.ts';
 import { addAuditLog, getAuditLogs, verifyAuditChain, toggleAuditTamperSimulation } from './server/audit.ts';
 import { extractTextFromBuffer } from './server/ocr.ts';
+import { createWatermarkedPdf } from './server/pdf-export.ts';
 import { AIService } from './server/ai.ts';
 import { UserRole, DocumentType, CaseStatus } from './src/types.ts';
 
@@ -860,7 +861,7 @@ app.post(
 );
 
 // GET /api/documents/:id/download
-app.get('/api/documents/:id/download', authenticateJwt, (req: AuthenticatedRequest, res: Response) => {
+app.get('/api/documents/:id/download', authenticateJwt, async (req: AuthenticatedRequest, res: Response) => {
   const docId = parseInt(req.params.id, 10);
   const doc = getDocumentById(docId);
   const role = req.user!.role;
@@ -892,23 +893,44 @@ app.get('/api/documents/:id/download', authenticateJwt, (req: AuthenticatedReque
     return res.status(404).json({ status: 404, message: 'Physical file not found on disk storage' });
   }
 
-  addAuditLog({
-    userId: req.user!.userId,
-    username: req.user!.username,
-    role: req.user!.role,
-    action: 'DOCUMENT_DOWNLOADED',
-    documentId: doc.id,
-    documentName: doc.documentName,
-    caseId: doc.caseId,
-    caseNumber: doc.caseNumber,
-    ipAddress: req.ip || '127.0.0.1',
-    description: `File downloaded securely: "${doc.originalFilename}" (SHA-256 verified)`,
-    status: 'SUCCESS',
-  });
+  try {
+    const source = fs.readFileSync(doc.filePath);
+    const watermark = getWatermarkMetadata(doc, {
+      fullName: req.user!.fullName,
+      role: req.user!.role,
+    });
+    const pdf = await createWatermarkedPdf(
+      source,
+      doc.extractedText || doc.documentName,
+      watermark.watermarkText,
+      watermark.metadataLines,
+      doc.sha256Hash,
+      'OFFICIAL DECRYPTED WATERMARKED EXPORT',
+    );
 
-  res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.originalFilename)}"`);
-  res.setHeader('Content-Type', doc.mimeType);
-  return fs.createReadStream(doc.filePath).pipe(res);
+    addAuditLog({
+      userId: req.user!.userId,
+      username: req.user!.username,
+      role: req.user!.role,
+      action: 'DOCUMENT_DOWNLOADED',
+      documentId: doc.id,
+      documentName: doc.documentName,
+      caseId: doc.caseId,
+      caseNumber: doc.caseNumber,
+      ipAddress: req.ip || '127.0.0.1',
+      description: `File downloaded securely: "${doc.originalFilename}" (SHA-256 verified)`,
+      status: 'SUCCESS',
+    });
+
+    const downloadName = path.parse(doc.originalFilename).name
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="DECRYPTED_${downloadName}.pdf"`);
+    res.setHeader('Content-Type', 'application/pdf');
+    return res.send(pdf);
+  } catch (error) {
+    console.error(`Failed to create PDF export for document ${doc.id}:`, error);
+    return res.status(500).json({ status: 500, message: 'Unable to generate the PDF document export.' });
+  }
 });
 
 // GET /api/documents/:id/versions
@@ -1892,7 +1914,7 @@ app.get('/api/documents/:id/preview-secure', authenticateJwt, (req: Authenticate
 });
 
 // GET /api/documents/:id/download-watermarked
-app.get('/api/documents/:id/download-watermarked', authenticateJwt, (req: AuthenticatedRequest, res: Response) => {
+app.get('/api/documents/:id/download-watermarked', authenticateJwt, async (req: AuthenticatedRequest, res: Response) => {
   const docId = parseInt(req.params.id, 10);
   const doc = getDocumentById(docId);
   if (!doc) {
@@ -1910,27 +1932,25 @@ app.get('/api/documents/:id/download-watermarked', authenticateJwt, (req: Authen
     role: req.user!.role,
   });
 
-  let fileContent = '';
-  if (fs.existsSync(doc.filePath)) {
-    fileContent = fs.readFileSync(doc.filePath, 'utf-8');
-  } else {
-    fileContent = doc.extractedText || 'Document content unavailable';
+  try {
+    const source = fs.existsSync(doc.filePath) ? fs.readFileSync(doc.filePath) : null;
+    const pdf = await createWatermarkedPdf(
+      source,
+      doc.extractedText || doc.documentName,
+      watermark.watermarkText,
+      watermark.metadataLines,
+      doc.sha256Hash,
+    );
+    const downloadName = path.parse(doc.originalFilename).name
+      .replace(/[^a-zA-Z0-9_-]/g, '_');
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="WATERMARKED_${downloadName}.pdf"`);
+    return res.send(pdf);
+  } catch (error) {
+    console.error(`Failed to create watermarked PDF for document ${doc.id}:`, error);
+    return res.status(500).json({ status: 500, message: 'Unable to generate the watermarked PDF export.' });
   }
-
-  const header = `================================================================================
-NATIONAL CRIME RECORDS BUREAU - OFFICIAL EVIDENTIARY WATERMARK
-${watermark.metadataLines.join('\n')}
-================================================================================\n\n`;
-
-  const footer = `\n\n================================================================================
-END OF WATERMARKED EXPORT • VERIFIED HASH: ${doc.sha256Hash}
-================================================================================`;
-
-  const watermarkedDocument = header + fileContent + footer;
-
-  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="WATERMARKED_${doc.storedFilename}.txt"`);
-  return res.send(watermarkedDocument);
 });
 
 // -------------------------------------------------------------

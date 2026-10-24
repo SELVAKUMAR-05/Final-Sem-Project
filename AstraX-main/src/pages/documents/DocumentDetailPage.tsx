@@ -45,12 +45,15 @@ export const DocumentDetailPage: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<DocTab>('preview');
   const [document, setDocument] = useState<LegalDocument | null>(null);
+  const [documentLoadError, setDocumentLoadError] = useState<{ title: string; description: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [previewContent, setPreviewContent] = useState<string>('');
   const [watermark, setWatermark] = useState<{ watermarkText: string; metadataLines: string[] } | null>(null);
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [verifying, setVerifying] = useState<boolean>(false);
+  const [downloadingWatermarked, setDownloadingWatermarked] = useState<boolean>(false);
+  const [downloadingDocument, setDownloadingDocument] = useState<boolean>(false);
   const [integrityResult, setIntegrityResult] = useState<IntegrityCheckResult | null>(null);
 
   // Modals & Action States
@@ -69,6 +72,7 @@ export const DocumentDetailPage: React.FC = () => {
       setLoading(true);
       const doc = await api.getDocumentById(numericId);
       setDocument(doc);
+      setDocumentLoadError(null);
       setVersions(doc.versions || []);
 
       // Load secure preview
@@ -92,7 +96,24 @@ export const DocumentDetailPage: React.FC = () => {
       }
     } catch (err) {
       console.error('Failed to load document details:', err);
-      showToast('Error loading legal document workspace', 'error');
+      const status = (err as { status?: number }).status;
+      if (status === 403) {
+        setDocumentLoadError({
+          title: 'Access Denied',
+          description: 'Your role is not authorized to view this document.',
+        });
+      } else if (status === 404) {
+        setDocumentLoadError({
+          title: 'Document Not Found',
+          description: 'The requested legal document could not be located in the encrypted repository.',
+        });
+      } else {
+        setDocumentLoadError({
+          title: 'Unable to Load Document',
+          description: 'An error occurred while loading this document. Please try again.',
+        });
+        showToast('Error loading legal document workspace', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -118,6 +139,30 @@ export const DocumentDetailPage: React.FC = () => {
       showToast(err.message || 'Integrity check failed', 'error');
     } finally {
       setVerifying(false);
+    }
+  };
+
+  const handleDownloadWatermarked = async () => {
+    if (!document) return;
+    try {
+      setDownloadingWatermarked(true);
+      await api.downloadWatermarkedDocument(document.id);
+    } catch (err: any) {
+      showToast(err.message || 'Watermarked document download failed', 'error');
+    } finally {
+      setDownloadingWatermarked(false);
+    }
+  };
+
+  const handleDownloadDocument = async () => {
+    if (!document) return;
+    try {
+      setDownloadingDocument(true);
+      await api.downloadDocument(document.id);
+    } catch (err: any) {
+      showToast(err.message || 'Document download failed', 'error');
+    } finally {
+      setDownloadingDocument(false);
     }
   };
 
@@ -206,11 +251,11 @@ export const DocumentDetailPage: React.FC = () => {
   if (!document) {
     return (
       <div>
-        <Breadcrumbs items={[{ label: 'Documents', to: '/documents' }, { label: 'Not Found' }]} />
+        <Breadcrumbs items={[{ label: 'Documents', to: '/documents' }, { label: documentLoadError?.title || 'Not Found' }]} />
         <EmptyState
           icon={AlertTriangle}
-          title="Document Not Found"
-          description="The requested legal document could not be located in the encrypted repository."
+          title={documentLoadError?.title || 'Document Not Found'}
+          description={documentLoadError?.description || 'The requested legal document could not be located in the encrypted repository.'}
           actionLabel="Return to Documents"
           onAction={() => navigate('/documents')}
         />
@@ -352,25 +397,25 @@ export const DocumentDetailPage: React.FC = () => {
             <span>{verifying ? 'Verifying Hash...' : 'Verify Integrity'}</span>
           </button>
 
-          <a
-            href={api.getWatermarkedDownloadUrl(document.id)}
-            download
+          <button
+            onClick={handleDownloadWatermarked}
+            disabled={downloadingWatermarked}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
           >
             <Download size={14} />
-            <span>Watermarked Copy</span>
-          </a>
+            <span>{downloadingWatermarked ? 'Downloading...' : 'Watermarked Copy'}</span>
+          </button>
 
-          <a
-            href={api.getDownloadUrl(document.id)}
-            download
+          <button
+            onClick={handleDownloadDocument}
+            disabled={downloadingDocument}
             className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', textDecoration: 'none' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
           >
             <Download size={14} />
-            <span>Official Decrypted Export</span>
-          </a>
+            <span>{downloadingDocument ? 'Downloading...' : 'Official Decrypted Export'}</span>
+          </button>
         </div>
       </div>
 

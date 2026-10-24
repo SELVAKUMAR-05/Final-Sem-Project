@@ -64,6 +64,50 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
   return response.json();
 }
 
+async function downloadDocumentFile(endpoint: string, fallbackFilename: string): Promise<void> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error('You must be signed in to download this document.');
+  }
+
+  const response = await fetch(endpoint, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    let message = `Unable to download document (HTTP ${response.status}).`;
+    try {
+      const errorData = await response.json();
+      if (typeof errorData.message === 'string') message = errorData.message;
+    } catch {
+      // Keep the HTTP error message when the response is not JSON.
+    }
+    const error = new Error(message) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+  }
+
+  const contentDisposition = response.headers.get('Content-Disposition');
+  const encodedFilename = contentDisposition?.match(/filename="([^"]+)"/i)?.[1];
+  let filename = fallbackFilename;
+  if (encodedFilename) {
+    try {
+      filename = decodeURIComponent(encodedFilename);
+    } catch {
+      filename = encodedFilename;
+    }
+  }
+
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
+
 export const api = {
   // Auth
   async login(username: string, password: string): Promise<{ token: string; userId: number; username: string; role: any; fullName: string; department: string }> {
@@ -266,14 +310,15 @@ export const api = {
     return request(`/api/documents/${docId}/preview-secure`);
   },
 
-  getDownloadUrl(docId: number): string {
-    const token = getStoredToken();
-    return `/api/documents/${docId}/download?token=${encodeURIComponent(token || '')}`;
+  async downloadDocument(docId: number): Promise<void> {
+    return downloadDocumentFile(`/api/documents/${docId}/download`, `document-${docId}`);
   },
 
-  getWatermarkedDownloadUrl(docId: number): string {
-    const token = getStoredToken();
-    return `/api/documents/${docId}/download-watermarked?token=${encodeURIComponent(token || '')}`;
+  async downloadWatermarkedDocument(docId: number): Promise<void> {
+    return downloadDocumentFile(
+      `/api/documents/${docId}/download-watermarked`,
+      `WATERMARKED_document-${docId}.txt`,
+    );
   },
 
   // AI Document Intelligence

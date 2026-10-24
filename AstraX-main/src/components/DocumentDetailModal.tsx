@@ -41,6 +41,7 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
   const [watermarkMeta, setWatermarkMeta] = useState<any>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [downloadingWatermarked, setDownloadingWatermarked] = useState(false);
 
   // AI Intelligence state
   const [aiSummary, setAiSummary] = useState<any>(null);
@@ -92,8 +93,15 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
     }
   }, [activeTab]);
 
-  const handleDownloadWatermarked = () => {
-    window.open(api.getWatermarkedDownloadUrl(doc.id), '_blank');
+  const handleDownloadWatermarked = async () => {
+    try {
+      setDownloadingWatermarked(true);
+      await api.downloadWatermarkedDocument(doc.id);
+    } catch (err: any) {
+      showToast(err.message || 'Watermarked document download failed', 'error');
+    } finally {
+      setDownloadingWatermarked(false);
+    }
   };
 
   const handleWorkflowAction = async (action: 'submit' | 'approve' | 'reject' | 'finalize') => {
@@ -244,9 +252,9 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                         </span>
                       )}
                     </div>
-                    <button className="btn btn-secondary btn-sm" onClick={handleDownloadWatermarked}>
+                    <button className="btn btn-secondary btn-sm" onClick={handleDownloadWatermarked} disabled={downloadingWatermarked}>
                       <Download size={13} />
-                      Export Watermarked Copy
+                      {downloadingWatermarked ? 'Downloading...' : 'Export Watermarked Copy'}
                     </button>
                   </div>
 
