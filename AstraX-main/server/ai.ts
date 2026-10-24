@@ -34,7 +34,82 @@ export interface AISummaryResult {
   disclaimer: string;
 }
 
+export interface DocumentPreviewBlock {
+  type: 'heading' | 'subheading' | 'paragraph' | 'list';
+  text: string;
+}
+
 export class AIService {
+  static formatDocumentForPreview(text: string): DocumentPreviewBlock[] {
+    const headingNames = [
+      'FIRST INFORMATION REPORT',
+      'WITNESS STATEMENT',
+      'FORENSIC REPORT',
+      'CHARGE SHEET',
+      'CASE DETAILS',
+      'INCIDENT DETAILS',
+      'COMPLAINANT DETAILS',
+      'ACCUSED DETAILS',
+      'WITNESS DETAILS',
+      'INVESTIGATION DETAILS',
+      'EVIDENCE DETAILS',
+      'OFFICER DETAILS',
+      'DIGITAL FORENSICS',
+      'EXAMINATION DETAILS',
+      'CHAIN OF CUSTODY',
+      'LEGAL PROVISIONS',
+      'METHODOLOGY',
+      'OBSERVATIONS',
+      'FINDINGS',
+      'CONCLUSION',
+      'JUDGMENT',
+      'COURT ORDER',
+    ];
+    const headingAlternation = headingNames.join('|');
+    const normalized = (text || '')
+      .replace(/\0/g, '')
+      .replace(/\r\n?/g, '\n')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\s+(?=Page\s+\d+\b)/gi, '\n')
+      .replace(/(Page\s+\d+)\s+/gi, '$1\n')
+      .replace(
+        new RegExp(`\\s*(\\d+(?:\\.\\d+)*[.)]\\s+)?(${headingAlternation})(?=\\s|\\(|:|—|–|-)`, 'gi'),
+        '\n$1$2'
+      )
+      .replace(/\s+(?=\d+(?:\.\d+)*[.)]\s+[A-Z])/g, '\n')
+      .replace(/\s+(?=Field\s+(?:Sample\s+entry|Value|Details)\b)/gi, '\n')
+      .trim();
+
+    const sections = normalized
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    return sections.map((line, index) => {
+      const isKnownHeading = headingNames.some((heading) => line.toUpperCase().startsWith(heading));
+      const isNumberedHeading = /^\d+(?:\.\d+)*[.)]\s+[A-Z][^.!?]{0,100}$/.test(line);
+      const letters = line.match(/[A-Za-z]/g) || [];
+      const uppercaseRatio = letters.length
+        ? letters.filter((letter) => letter === letter.toUpperCase()).length / letters.length
+        : 0;
+      const isTitle = index === 0 && line.length <= 120 && uppercaseRatio > 0.65;
+      const isHeading = isKnownHeading || isNumberedHeading || (line.length <= 100 && uppercaseRatio > 0.75);
+      const isSubheading = !isHeading && line.length <= 90 && /:$/.test(line);
+      const isList = /^(?:\d+(?:\.\d+)*[.)]|[-*•])\s+/.test(line);
+
+      return {
+        type: isTitle || isKnownHeading || (isHeading && !isNumberedHeading)
+          ? 'heading'
+          : isNumberedHeading || isSubheading
+            ? 'subheading'
+            : isList
+              ? 'list'
+              : 'paragraph',
+        text: line,
+      };
+    });
+  }
+
   /**
    * Classifies document type from extracted text and filename
    */

@@ -305,6 +305,7 @@ export const api = {
   async getSecureDocumentPreview(docId: number): Promise<{
     document: LegalDocument;
     content: string;
+    structuredContent: Array<{ type: 'heading' | 'subheading' | 'paragraph' | 'list'; text: string }>;
     watermark: { watermarkText: string; metadataLines: string[] };
   }> {
     return request(`/api/documents/${docId}/preview-secure`);

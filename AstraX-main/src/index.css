@@ -1225,6 +1225,38 @@ body {
   color: #475569;
 }
 
+.document-preview-content {
+  position: relative;
+  z-index: 2;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 15px;
+  line-height: 1.8;
+  white-space: normal;
+}
+
+.document-preview-heading {
+  margin: 24px 0 12px;
+  color: #0f172a;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.document-preview-subheading {
+  margin: 18px 0 8px;
+  color: #1e293b;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.document-preview-paragraph {
+  margin: 0 0 12px;
+}
+
+.document-preview-list {
+  margin: 0 0 10px;
+  padding-left: 24px;
+}
+
 /* --------------------------------------------------------------------------
    GRID LAYOUTS
    -------------------------------------------------------------------------- */

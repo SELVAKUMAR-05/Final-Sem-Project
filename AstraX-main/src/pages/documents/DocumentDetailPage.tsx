@@ -48,6 +48,7 @@ export const DocumentDetailPage: React.FC = () => {
   const [documentLoadError, setDocumentLoadError] = useState<{ title: string; description: string } | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [previewContent, setPreviewContent] = useState<string>('');
+  const [structuredPreview, setStructuredPreview] = useState<Array<{ type: 'heading' | 'subheading' | 'paragraph' | 'list'; text: string }>>([]);
   const [watermark, setWatermark] = useState<{ watermarkText: string; metadataLines: string[] } | null>(null);
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
@@ -74,25 +75,30 @@ export const DocumentDetailPage: React.FC = () => {
       setDocument(doc);
       setDocumentLoadError(null);
       setVersions(doc.versions || []);
+      setLoading(false);
 
-      // Load secure preview
-      try {
-        const prev = await api.getSecureDocumentPreview(numericId);
-        setPreviewContent(prev.content || doc.extractedText || 'No text content available.');
-        setWatermark(prev.watermark);
-      } catch (e) {
+      const [previewResult, auditResult] = await Promise.allSettled([
+        api.getSecureDocumentPreview(numericId),
+        api.getAuditLogs({ limit: 100 }),
+      ]);
+
+      if (previewResult.status === 'fulfilled') {
+        setPreviewContent(previewResult.value.content || doc.extractedText || 'No text content available.');
+        setStructuredPreview(previewResult.value.structuredContent || []);
+        setWatermark(previewResult.value.watermark);
+      } else {
         setPreviewContent(doc.extractedText || 'Preview content loaded from metadata.');
+        setStructuredPreview([]);
       }
 
-      // Load audit logs
-      try {
-        const logs = await api.getAuditLogs({ limit: 100 });
+      if (auditResult.status === 'fulfilled') {
+        const logs = auditResult.value;
         const docLogs = logs.filter(
           (l) => l.documentId === doc.id || l.description?.includes(doc.documentName) || l.description?.includes(doc.originalFilename)
         );
         setAuditLogs(docLogs.length > 0 ? docLogs : logs.slice(0, 8));
-      } catch (e) {
-        console.warn('Could not load audit logs:', e);
+      } else {
+        console.warn('Could not load audit logs:', auditResult.reason);
       }
     } catch (err) {
       console.error('Failed to load document details:', err);
@@ -690,11 +696,10 @@ export const DocumentDetailPage: React.FC = () => {
                   boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                   padding: '40px',
                   minHeight: '480px',
-                  fontFamily: "'Courier New', Courier, monospace",
-                  fontSize: '13px',
+                  fontFamily: "Georgia, 'Times New Roman', serif",
+                  fontSize: '15px',
                   lineHeight: 1.8,
                   color: '#1e293b',
-                  whiteSpace: 'pre-wrap',
                   position: 'relative'
                 }}
               >
@@ -718,7 +723,24 @@ export const DocumentDetailPage: React.FC = () => {
                   SEC 65B(4) VERIFIED
                 </div>
 
-                {previewContent}
+                <div style={{ position: 'relative' }}>
+                  {structuredPreview.length > 0 ? structuredPreview.map((block, index) => (
+                    <div
+                      key={`${index}-${block.text}`}
+                      style={{
+                        margin: block.type === 'heading' ? '24px 0 12px' : block.type === 'subheading' ? '18px 0 8px' : '0 0 12px',
+                        paddingLeft: block.type === 'list' ? '24px' : 0,
+                        fontSize: block.type === 'heading' ? '19px' : block.type === 'subheading' ? '16px' : '15px',
+                        fontWeight: block.type === 'heading' || block.type === 'subheading' ? 700 : 400,
+                        textAlign: 'left',
+                        whiteSpace: 'pre-wrap',
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      {block.type === 'list' && /^[-*]\s+/.test(block.text) ? '• ' : null}{block.text}
+                    </div>
+                  )) : previewContent}
+                </div>
               </div>
             </div>
           )}

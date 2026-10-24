@@ -1882,15 +1882,7 @@ app.get('/api/documents/:id/preview-secure', authenticateJwt, (req: Authenticate
     role: req.user!.role,
   });
 
-  let fileText = doc.extractedText || '';
-  if (fs.existsSync(doc.filePath)) {
-    try {
-      const raw = fs.readFileSync(doc.filePath, 'utf-8');
-      if (raw.length > 0) fileText = raw;
-    } catch {
-      // keep fallback
-    }
-  }
+  const fileText = doc.extractedText?.trim() || 'No readable text could be extracted from this document. Download the original file to view its contents.';
 
   addAuditLog({
     userId: req.user!.userId,
@@ -1909,6 +1901,7 @@ app.get('/api/documents/:id/preview-secure', authenticateJwt, (req: Authenticate
   return res.json({
     document: doc,
     content: fileText,
+    structuredContent: AIService.formatDocumentForPreview(fileText),
     watermark,
   });
 });

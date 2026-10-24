@@ -38,6 +38,7 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
 
   // Preview & Watermark state
   const [previewContent, setPreviewContent] = useState<string>('');
+  const [structuredPreview, setStructuredPreview] = useState<Array<{ type: 'heading' | 'subheading' | 'paragraph' | 'list'; text: string }>>([]);
   const [watermarkMeta, setWatermarkMeta] = useState<any>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
@@ -63,6 +64,7 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
     try {
       const res = await api.getSecureDocumentPreview(doc.id);
       setPreviewContent(res.content);
+      setStructuredPreview(res.structuredContent || []);
       setWatermarkMeta(res.watermark);
     } catch (err: any) {
       setPreviewError(err.message || '403 Forbidden: Insufficient clearance to preview this document.');
@@ -272,8 +274,15 @@ export const DocumentDetailModal: React.FC<DocumentDetailModalProps> = ({ docume
                         ))}
                       </div>
                     )}
-                    <div>
-                      {previewContent || 'Document file loaded with zero text extraction.'}
+                    <div className="document-preview-content">
+                      {structuredPreview.length > 0 ? structuredPreview.map((block, index) => (
+                        <div
+                          key={`${index}-${block.text}`}
+                          className={`document-preview-${block.type}`}
+                        >
+                          {block.type === 'list' && /^[-*]\s+/.test(block.text) ? '• ' : null}{block.text}
+                        </div>
+                      )) : previewContent || 'Document file loaded with zero text extraction.'}
                     </div>
                   </div>
                 </div>
