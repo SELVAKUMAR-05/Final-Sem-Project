@@ -1,5 +1,6 @@
 import { 
   User, 
+  UserRole,
   Case, 
   LegalDocument, 
   DocumentVersion, 
@@ -196,7 +197,15 @@ export const api = {
     return request<User[]>('/api/users');
   },
 
-  async createUser(userData: any): Promise<User> {
+  async createUser(userData: {
+    username: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    fullName: string;
+    department: string;
+    badgeNumber: string;
+  }): Promise<User> {
     return request<User>('/api/users', {
       method: 'POST',
       body: JSON.stringify(userData),
@@ -207,6 +216,12 @@ export const api = {
     return request<User>(`/api/users/${userId}`, {
       method: 'PUT',
       body: JSON.stringify({ active }),
+    });
+  },
+
+  async deleteUser(userId: number): Promise<{ status: number; message: string }> {
+    return request<{ status: number; message: string }>(`/api/users/${userId}`, {
+      method: 'DELETE',
     });
   },
 

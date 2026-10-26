@@ -253,6 +253,7 @@ export interface AuditLog {
     | 'EVIDENCE_TRANSFERRED'
     | 'EVIDENCE_RECEIVED'
     | 'USER_CREATED'
+    | 'USER_DELETED'
     | 'USER_DISABLED'
     | 'PROFILE_PHOTO_UPDATED'
     | 'PERMISSION_CHANGED'

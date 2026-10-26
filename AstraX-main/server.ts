@@ -166,6 +166,10 @@ function authenticateJwt(req: AuthenticatedRequest, res: Response, next: NextFun
     return res.status(401).json({ status: 401, message: 'Session expired or invalid token. Please log in again.' });
   }
 
+  if (!findUserById(payload.userId)) {
+    return res.status(401).json({ status: 401, message: 'This account no longer exists. Please log in again.' });
+  }
+
   req.user = payload;
   next();
 }
@@ -372,7 +376,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
   }
 
   const db = getDb();
-  const newId = db.users.length + 1;
+  const newId = Math.max(0, ...db.users.map((user) => user.id)) + 1;
   const newUser = {
     id: newId,
     username: username.trim(),
@@ -478,7 +482,7 @@ app.post('/api/users', authenticateJwt, (req: AuthenticatedRequest, res: Respons
   }
 
   const db = getDb();
-  const newId = db.users.length + 1;
+  const newId = Math.max(0, ...db.users.map((user) => user.id)) + 1;
   const newUser = {
     id: newId,
     username,
@@ -539,6 +543,44 @@ app.put('/api/users/:id', authenticateJwt, (req: AuthenticatedRequest, res: Resp
 
   persistDatabase();
   return res.json(user);
+});
+
+// DELETE /api/users/:id (Admin only)
+app.delete('/api/users/:id', authenticateJwt, (req: AuthenticatedRequest, res: Response) => {
+  if (req.user?.role !== 'ADMIN') {
+    return res.status(403).json({ status: 403, message: 'Only administrators can delete users' });
+  }
+
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id <= 0) {
+    return res.status(400).json({ status: 400, message: 'Invalid user ID' });
+  }
+
+  if (id === req.user.userId) {
+    return res.status(403).json({ status: 403, message: 'Administrators cannot delete their own account' });
+  }
+
+  const db = getDb();
+  const userIndex = db.users.findIndex((user) => user.id === id);
+  if (userIndex === -1) {
+    return res.status(404).json({ status: 404, message: 'User not found' });
+  }
+
+  const [user] = db.users.splice(userIndex, 1);
+  db.userPasswords.delete(id);
+  persistDatabase();
+
+  addAuditLog({
+    userId: req.user.userId,
+    username: req.user.username,
+    role: req.user.role,
+    action: 'USER_DELETED',
+    ipAddress: req.ip || req.socket.remoteAddress || '127.0.0.1',
+    description: `Deleted account for user ${user.username} (${user.fullName})`,
+    status: 'SUCCESS',
+  });
+
+  return res.json({ status: 200, message: 'User account deleted successfully.' });
 });
 
 // -------------------------------------------------------------

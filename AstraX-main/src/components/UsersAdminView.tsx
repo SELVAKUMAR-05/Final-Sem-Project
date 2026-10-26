@@ -57,6 +57,7 @@ export const UsersAdminView: React.FC = () => {
     try {
       await api.createUser({
         username,
+        email: username,
         fullName,
         role,
         department,
