@@ -183,6 +183,25 @@ export const api = {
     return response.blob();
   },
 
+  async getUserProfilePhoto(userId: number): Promise<Blob | null> {
+    const token = getStoredToken();
+    const response = await fetch(`/api/users/${userId}/photo`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : undefined,
+    });
+
+    if (response.status === 204) return null;
+    if (!response.ok) {
+      throw new Error(`Unable to load profile photo for user ${userId} (HTTP ${response.status}).`);
+    }
+
+    const contentType = response.headers.get('Content-Type')?.split(';')[0];
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType || '')) {
+      throw new Error(`The server returned an invalid profile photo for user ${userId}.`);
+    }
+
+    return response.blob();
+  },
+
   async uploadProfilePhoto(photo: File): Promise<{ status: number; message: string }> {
     const formData = new FormData();
     formData.append('photo', photo);

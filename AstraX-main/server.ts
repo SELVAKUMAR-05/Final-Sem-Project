@@ -465,6 +465,35 @@ app.get('/api/users', authenticateJwt, (req: AuthenticatedRequest, res: Response
   return res.json(db.users);
 });
 
+app.get('/api/users/:id/photo', authenticateJwt, (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  if (req.user?.role !== 'ADMIN') {
+    return res.status(403).json({ status: 403, message: 'Only administrators can view officer profile photos.' });
+  }
+
+  const userId = Number.parseInt(req.params.id, 10);
+  if (!Number.isInteger(userId)) {
+    return res.status(400).json({ status: 400, message: 'Invalid user ID.' });
+  }
+
+  const user = findUserById(userId);
+  if (!user) {
+    return res.status(404).json({ status: 404, message: 'User not found.' });
+  }
+
+  const filename = getUserProfilePhotoFile(userId);
+  if (!filename) return res.status(204).end();
+
+  const photoPath = path.join(STORAGE_DIR, 'profile-photos', filename);
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.sendFile(photoPath, (err) => {
+    if (!err) return;
+    if (res.headersSent) return next(err);
+    console.error(`Failed to read profile photo for user ${userId}:`, err);
+    const status = (err as NodeJS.ErrnoException).code === 'ENOENT' ? 404 : 500;
+    res.status(status).json({ status, message: 'Unable to load the user profile photo.' });
+  });
+});
+
 // POST /api/users (Admin only)
 app.post('/api/users', authenticateJwt, (req: AuthenticatedRequest, res: Response) => {
   if (req.user?.role !== 'ADMIN') {

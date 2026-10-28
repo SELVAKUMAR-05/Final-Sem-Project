@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs.tsx';
 import { useToast } from '../../components/common/Toast.tsx';
@@ -12,16 +12,43 @@ import {
   Award,
   CheckCircle2,
   Calendar,
-  Camera
+  Camera,
+  X,
+  Move,
+  ZoomIn
 } from 'lucide-react';
+
+interface CropImage {
+  file: File;
+  url: string;
+  width: number;
+  height: number;
+}
+
+interface CropOffset {
+  x: number;
+  y: number;
+}
+
+const CROP_VIEW_SIZE = 280;
+const CROP_OUTPUT_SIZE = 512;
 
 export const ProfilePage: React.FC = () => {
   const { currentUser, profilePhotoUrl, uploadProfilePhoto } = useAuth();
   const { showToast } = useToast();
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const cropImageRef = useRef<CropImage | null>(null);
+  const dragStartRef = useRef<{ x: number; y: number; offset: CropOffset } | null>(null);
+  const [cropImage, setCropImage] = useState<CropImage | null>(null);
+  const [cropZoom, setCropZoom] = useState(1);
+  const [cropOffset, setCropOffset] = useState<CropOffset>({ x: 0, y: 0 });
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
-  const handlePhotoSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  useEffect(() => () => {
+    if (cropImageRef.current) URL.revokeObjectURL(cropImageRef.current.url);
+  }, []);
+
+  const handlePhotoSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const photo = event.target.files?.[0];
     event.target.value = '';
     if (!photo) return;
@@ -36,12 +63,121 @@ export const ProfilePage: React.FC = () => {
       return;
     }
 
+    if (cropImageRef.current) URL.revokeObjectURL(cropImageRef.current.url);
+    const url = URL.createObjectURL(photo);
+    const image = new Image();
+    image.onload = () => {
+      const selectedImage = { file: photo, url, width: image.naturalWidth, height: image.naturalHeight };
+      cropImageRef.current = selectedImage;
+      setCropImage(selectedImage);
+      setCropZoom(1);
+      setCropOffset({ x: 0, y: 0 });
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      showToast('Unable to open this image. Please choose another photo.', 'error');
+    };
+    image.src = url;
+  };
+
+  const closeCropDialog = () => {
+    if (cropImageRef.current) URL.revokeObjectURL(cropImageRef.current.url);
+    cropImageRef.current = null;
+    setCropImage(null);
+    setCropOffset({ x: 0, y: 0 });
+    setCropZoom(1);
+  };
+
+  useEffect(() => {
+    if (!cropImage) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !isUploadingPhoto) closeCropDialog();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cropImage, isUploadingPhoto]);
+
+  const handleCropZoomChange = (zoom: number) => {
+    setCropZoom(zoom);
+    if (!cropImage) return;
+
+    const scale = Math.max(CROP_VIEW_SIZE / cropImage.width, CROP_VIEW_SIZE / cropImage.height) * zoom;
+    const maxX = Math.max(0, (cropImage.width * scale - CROP_VIEW_SIZE) / 2);
+    const maxY = Math.max(0, (cropImage.height * scale - CROP_VIEW_SIZE) / 2);
+    setCropOffset((offset) => ({
+      x: Math.max(-maxX, Math.min(maxX, offset.x)),
+      y: Math.max(-maxY, Math.min(maxY, offset.y)),
+    }));
+  };
+
+  const handleCropPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!cropImage) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    dragStartRef.current = { x: event.clientX, y: event.clientY, offset: cropOffset };
+  };
+
+  const handleCropPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    const dragStart = dragStartRef.current;
+    if (!cropImage || !dragStart) return;
+
+    const scale = Math.max(CROP_VIEW_SIZE / cropImage.width, CROP_VIEW_SIZE / cropImage.height) * cropZoom;
+    const maxX = Math.max(0, (cropImage.width * scale - CROP_VIEW_SIZE) / 2);
+    const maxY = Math.max(0, (cropImage.height * scale - CROP_VIEW_SIZE) / 2);
+    setCropOffset({
+      x: Math.max(-maxX, Math.min(maxX, dragStart.offset.x + event.clientX - dragStart.x)),
+      y: Math.max(-maxY, Math.min(maxY, dragStart.offset.y + event.clientY - dragStart.y)),
+    });
+  };
+
+  const saveCroppedPhoto = async () => {
+    if (!cropImage || isUploadingPhoto) return;
+
     try {
       setIsUploadingPhoto(true);
-      await uploadProfilePhoto(photo);
+      const image = new Image();
+      image.src = cropImage.url;
+      await image.decode();
+
+      const scale = Math.max(CROP_VIEW_SIZE / cropImage.width, CROP_VIEW_SIZE / cropImage.height) * cropZoom;
+      const sourceSize = CROP_VIEW_SIZE / scale;
+      const sourceX = (cropImage.width - sourceSize) / 2 - cropOffset.x / scale;
+      const sourceY = (cropImage.height - sourceSize) / 2 - cropOffset.y / scale;
+      const canvas = document.createElement('canvas');
+      canvas.width = CROP_OUTPUT_SIZE;
+      canvas.height = CROP_OUTPUT_SIZE;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Unable to prepare the cropped profile photo.');
+
+      context.drawImage(
+        image,
+        sourceX,
+        sourceY,
+        sourceSize,
+        sourceSize,
+        0,
+        0,
+        CROP_OUTPUT_SIZE,
+        CROP_OUTPUT_SIZE
+      );
+
+      const croppedBlob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Unable to create the cropped profile photo.'));
+        }, 'image/jpeg', 0.92);
+      });
+
+      const croppedPhoto = new File([croppedBlob], `${cropImage.file.name.replace(/\.[^.]+$/, '')}.jpg`, {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+      await uploadProfilePhoto(croppedPhoto);
+      closeCropDialog();
       showToast('Profile photo updated successfully.', 'success');
     } catch (error) {
-      console.error('Failed to upload profile photo:', error);
+      console.error('Failed to crop or upload profile photo:', error);
       showToast(error instanceof Error ? error.message : 'Unable to update profile photo.', 'error');
     } finally {
       setIsUploadingPhoto(false);
@@ -121,7 +257,7 @@ export const ProfilePage: React.FC = () => {
             {isUploadingPhoto ? 'Uploading photo...' : profilePhotoUrl ? 'Change photo' : 'Upload photo'}
           </button>
           <div style={{ color: '#64748b', fontSize: '11px', marginBottom: '16px' }}>
-            JPEG, PNG, or WebP · up to 5 MB
+            JPEG, PNG, or WebP · up to 5 MB · crop before saving
           </div>
 
           <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
@@ -259,6 +395,100 @@ export const ProfilePage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {cropImage && (
+        <div className="photo-crop-backdrop" onClick={() => !isUploadingPhoto && closeCropDialog()}>
+          <section
+            className="photo-crop-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="photo-crop-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header className="photo-crop-dialog__header">
+              <div>
+                <span className="photo-crop-dialog__eyebrow">PROFILE PHOTO</span>
+                <h2 id="photo-crop-title">Adjust your photo</h2>
+                <p>Drag the image to choose what appears in your profile.</p>
+              </div>
+              <button
+                type="button"
+                className="photo-crop-dialog__close"
+                onClick={closeCropDialog}
+                disabled={isUploadingPhoto}
+                aria-label="Cancel photo crop"
+              >
+                <X size={19} />
+              </button>
+            </header>
+
+            <div className="photo-crop-dialog__content">
+              <div
+                className="photo-crop-viewport"
+                onPointerDown={handleCropPointerDown}
+                onPointerMove={handleCropPointerMove}
+                onPointerUp={() => { dragStartRef.current = null; }}
+                onPointerCancel={() => { dragStartRef.current = null; }}
+                role="img"
+                aria-label="Photo crop preview. Drag to reposition the image."
+              >
+                <img
+                  src={cropImage.url}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    width: cropImage.width * Math.max(CROP_VIEW_SIZE / cropImage.width, CROP_VIEW_SIZE / cropImage.height) * cropZoom,
+                    height: cropImage.height * Math.max(CROP_VIEW_SIZE / cropImage.width, CROP_VIEW_SIZE / cropImage.height) * cropZoom,
+                    left: `calc(50% + ${cropOffset.x}px)`,
+                    top: `calc(50% + ${cropOffset.y}px)`,
+                  }}
+                />
+                <div className="photo-crop-viewport__hint">
+                  <Move size={14} />
+                  <span>Drag to reposition</span>
+                </div>
+              </div>
+
+              <label className="photo-crop-zoom">
+                <span><ZoomIn size={16} /> Zoom</span>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.01"
+                  value={cropZoom}
+                  onChange={(event) => handleCropZoomChange(Number(event.target.value))}
+                  aria-label="Zoom photo"
+                />
+                <output>{Math.round(cropZoom * 100)}%</output>
+              </label>
+
+              <p className="photo-crop-dialog__note">
+                The circular preview shows the area that will appear in your profile.
+              </p>
+            </div>
+
+            <footer className="photo-crop-dialog__actions">
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={closeCropDialog}
+                disabled={isUploadingPhoto}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => void saveCroppedPhoto()}
+                disabled={isUploadingPhoto}
+              >
+                {isUploadingPhoto ? 'Saving photo…' : 'Save profile photo'}
+              </button>
+            </footer>
+          </section>
+        </div>
+      )}
     </div>
   );
 };

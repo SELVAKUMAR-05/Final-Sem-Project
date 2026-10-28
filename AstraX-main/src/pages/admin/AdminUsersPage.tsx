@@ -18,6 +18,60 @@ import {
   LoaderCircle,
 } from 'lucide-react';
 
+const OfficerAvatar: React.FC<{
+  userId: number;
+  fullName: string;
+  onPhotoClick: (photoUrl: string) => void;
+}> = ({ userId, fullName, onPhotoClick }) => {
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+
+    api.getUserProfilePhoto(userId)
+      .then((photo) => {
+        if (!active || !photo) return;
+        objectUrl = URL.createObjectURL(photo);
+        setPhotoUrl(objectUrl);
+      })
+      .catch((error) => {
+        if (active) console.error(`Failed to load profile photo for user ${userId}:`, error);
+      });
+
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [userId]);
+
+  return (
+    <>
+      {photoUrl ? (
+        <button
+          type="button"
+          className="officer-avatar officer-avatar--photo"
+          onClick={() => onPhotoClick(photoUrl)}
+          aria-label={`View ${fullName}'s profile photo`}
+          title="View profile photo"
+        >
+          <img src={photoUrl} alt="" />
+        </button>
+      ) : (
+        <div className="officer-avatar" aria-label={`${fullName} profile photo not set`}>
+          {fullName.trim().charAt(0).toUpperCase() || <Users size={18} />}
+        </div>
+      )}
+    </>
+  );
+};
+
+interface OfficerPhotoPreview {
+  url: string;
+  fullName: string;
+  role: UserRole;
+}
+
 export const AdminUsersPage: React.FC = () => {
   const { currentUser } = useAuth();
   const { showToast } = useToast();
@@ -28,6 +82,7 @@ export const AdminUsersPage: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<OfficerPhotoPreview | null>(null);
 
   const [newUsername, setNewUsername] = useState<string>('');
   const [newFullName, setNewFullName] = useState<string>('');
@@ -65,6 +120,17 @@ export const AdminUsersPage: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [userToDelete, deletingUserId]);
+
+  useEffect(() => {
+    if (!photoPreview) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPhotoPreview(null);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [photoPreview]);
 
   const handleAddOfficer = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -244,8 +310,21 @@ export const AdminUsersPage: React.FC = () => {
                 return (
                   <tr key={officer.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '14px 18px' }}>
-                      <div style={{ fontWeight: 800, color: '#0f172a' }}>{officer.fullName}</div>
-                      <div style={{ fontSize: '11px', color: '#64748b' }}>@{officer.username} &bull; {officer.email}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '11px' }}>
+                        <OfficerAvatar
+                          userId={officer.id}
+                          fullName={officer.fullName}
+                          onPhotoClick={(url) => setPhotoPreview({
+                            url,
+                            fullName: officer.fullName,
+                            role: officer.role,
+                          })}
+                        />
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, color: '#0f172a' }}>{officer.fullName}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b' }}>@{officer.username} &bull; {officer.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td style={{ padding: '14px 18px', fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: '#1d4ed8' }}>
                       {officer.badgeNumber || '—'}
@@ -455,6 +534,36 @@ export const AdminUsersPage: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {photoPreview && (
+        <div className="officer-photo-preview-backdrop" onClick={() => setPhotoPreview(null)}>
+          <section
+            className="officer-photo-preview"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="officer-photo-preview-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="officer-photo-preview__close"
+              onClick={() => setPhotoPreview(null)}
+              aria-label="Close profile photo"
+            >
+              <X size={20} />
+            </button>
+            <img
+              className="officer-photo-preview__image"
+              src={photoPreview.url}
+              alt={`${photoPreview.fullName} profile`}
+            />
+            <div className="officer-photo-preview__caption">
+              <strong id="officer-photo-preview-title">{photoPreview.fullName}</strong>
+              <span>{photoPreview.role.replace(/_/g, ' ')}</span>
+            </div>
+          </section>
         </div>
       )}
 
