@@ -22,6 +22,8 @@ import {
 export const AuditLogsPage: React.FC = () => {
   const { showToast } = useToast();
   const [logs, setLogs] = useState<AuditLog[]>([]);
+  const [totalEventCount, setTotalEventCount] = useState<number>(0);
+  const [isTotalCountUnavailable, setIsTotalCountUnavailable] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [actionFilter, setActionFilter] = useState<string>('ALL');
@@ -32,8 +34,23 @@ export const AuditLogsPage: React.FC = () => {
   const fetchLogs = async () => {
     try {
       setLoading(true);
-      const data = await api.getAuditLogs({ limit: 200 });
-      setLogs(data);
+      const [logsResult, countResult] = await Promise.allSettled([
+        api.getAuditLogs({ limit: 200 }),
+        api.getAuditLogCount(),
+      ]);
+
+      if (logsResult.status === 'rejected') throw logsResult.reason;
+
+      setLogs(logsResult.value);
+      if (countResult.status === 'fulfilled') {
+        setTotalEventCount(countResult.value);
+        setIsTotalCountUnavailable(false);
+      } else {
+        setTotalEventCount(logsResult.value.length);
+        setIsTotalCountUnavailable(true);
+        console.warn('Audit logs loaded, but the full ledger count is unavailable:', countResult.reason);
+        showToast('Audit records loaded, but the total count is unavailable. Restart the server to apply the audit count API.', 'info');
+      }
     } catch (err) {
       console.error('Failed to load audit logs:', err);
       showToast('Error loading audit ledger', 'error');
@@ -66,7 +83,6 @@ export const AuditLogsPage: React.FC = () => {
     currentPage * itemsPerPage
   );
 
-  const totalEvents = logs.length;
   const securityWarnings = logs.filter((l) => l.status === 'DENIED' || l.status === 'FLAGGED' || l.action === 'TAMPER_SIMULATION').length;
   const verifiedHashes = logs.filter((l) => Boolean(l.currentLogHash)).length;
 
@@ -119,11 +135,16 @@ export const AuditLogsPage: React.FC = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
         <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px 20px' }}>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
-            Total Audit Events
+            {isTotalCountUnavailable ? 'Audit Events Loaded' : 'Total Audit Events'}
           </div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>
-            {totalEvents}
+            {totalEventCount}
           </div>
+          {isTotalCountUnavailable && (
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+              Full ledger count unavailable
+            </div>
+          )}
         </div>
 
         <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '16px 20px' }}>

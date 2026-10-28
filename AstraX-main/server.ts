@@ -68,7 +68,7 @@ import {
   ROLE_PERMISSIONS,
   JWTPayload,
 } from './server/security.ts';
-import { addAuditLog, getAuditLogs, verifyAuditChain, toggleAuditTamperSimulation } from './server/audit.ts';
+import { addAuditLog, getAuditLogCount, getAuditLogs, verifyAuditChain, toggleAuditTamperSimulation } from './server/audit.ts';
 import { extractTextFromBuffer } from './server/ocr.ts';
 import { createWatermarkedPdf } from './server/pdf-export.ts';
 import { AIService } from './server/ai.ts';
@@ -1233,6 +1233,18 @@ app.get('/api/audit-logs', authenticateJwt, (req: AuthenticatedRequest, res: Res
   });
 
   return res.json(logs);
+});
+
+app.get('/api/audit-logs/count', authenticateJwt, (req: AuthenticatedRequest, res: Response) => {
+  const role = req.user!.role;
+  if (role !== 'ADMIN' && role !== 'COURT_OFFICER') {
+    return res.status(403).json({
+      status: 403,
+      message: 'Access Restricted: Only Security Administrators and Court Officers can inspect the raw audit trail.',
+    });
+  }
+
+  return res.json({ totalCount: getAuditLogCount() });
 });
 
 // -------------------------------------------------------------

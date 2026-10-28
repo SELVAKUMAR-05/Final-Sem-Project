@@ -512,6 +512,11 @@ export const api = {
     return request<AuditLog[]>(`/api/audit-logs?${params.toString()}`);
   },
 
+  async getAuditLogCount(): Promise<number> {
+    const result = await request<{ totalCount: number }>('/api/audit-logs/count');
+    return result.totalCount;
+  },
+
   async verifyAuditChain(): Promise<AuditVerificationResult> {
     return request<AuditVerificationResult>('/api/audit-logs/verify-chain', { method: 'POST' });
   },

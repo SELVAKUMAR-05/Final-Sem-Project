@@ -15,6 +15,10 @@ export function getAuditLedgerSnapshot(): AuditLog[] {
   return [...auditLogsChronological];
 }
 
+export function getAuditLogCount(): number {
+  return auditLogsChronological.length;
+}
+
 export function restoreAuditLedger(logs: AuditLog[]): void {
   auditLogsChronological = [...logs].sort((a, b) => a.id - b.id);
   nextAuditId = auditLogsChronological.reduce((maxId, log) => Math.max(maxId, log.id + 1), 1);

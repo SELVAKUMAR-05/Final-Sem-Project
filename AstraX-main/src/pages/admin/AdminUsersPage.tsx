@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   X,
   Trash2,
+  ShieldAlert,
+  LoaderCircle,
 } from 'lucide-react';
 
 export const AdminUsersPage: React.FC = () => {
@@ -25,6 +27,7 @@ export const AdminUsersPage: React.FC = () => {
   const [roleFilter, setRoleFilter] = useState<string>('ALL');
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   const [newUsername, setNewUsername] = useState<string>('');
   const [newFullName, setNewFullName] = useState<string>('');
@@ -49,6 +52,19 @@ export const AdminUsersPage: React.FC = () => {
   useEffect(() => {
     void fetchUsers();
   }, []);
+
+  useEffect(() => {
+    if (!userToDelete) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && deletingUserId === null) {
+        setUserToDelete(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [userToDelete, deletingUserId]);
 
   const handleAddOfficer = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -88,15 +104,17 @@ export const AdminUsersPage: React.FC = () => {
 
   const handleDeleteOfficer = async (user: User) => {
     if (user.id === currentUser?.id || deletingUserId !== null) return;
-    const confirmed = window.confirm(
-      `Delete the account for ${user.fullName} (@${user.username})? This action cannot be undone.`
-    );
-    if (!confirmed) return;
+    setUserToDelete(user);
+  };
 
+  const confirmDeleteOfficer = async () => {
+    if (!userToDelete || deletingUserId !== null) return;
+    const user = userToDelete;
     setDeletingUserId(user.id);
     try {
       await api.deleteUser(user.id);
       setOfficers((users) => users.filter((entry) => entry.id !== user.id));
+      setUserToDelete(null);
       showToast(`Account for ${user.fullName} deleted`, 'success');
     } catch (error) {
       showToast(error instanceof Error ? error.message : 'Failed to delete user account', 'error');
@@ -437,6 +455,92 @@ export const AdminUsersPage: React.FC = () => {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {userToDelete && (
+        <div
+          className="confirm-backdrop"
+          onClick={() => {
+            if (deletingUserId === null) setUserToDelete(null);
+          }}
+        >
+          <section
+            className="confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-user-title"
+            aria-describedby="delete-user-description"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="confirm-dialog__header">
+              <button
+                type="button"
+                className="confirm-dialog__close"
+                onClick={() => setUserToDelete(null)}
+                disabled={deletingUserId !== null}
+                aria-label="Close confirmation"
+              >
+                <X size={18} />
+              </button>
+              <div className="confirm-dialog__icon">
+                <ShieldAlert size={27} strokeWidth={1.8} />
+              </div>
+              <span className="confirm-dialog__eyebrow">ACCOUNT DELETION</span>
+              <h2 id="delete-user-title">Remove this officer?</h2>
+              <p>This account will be permanently removed from your organization.</p>
+            </div>
+
+            <div className="confirm-dialog__body">
+              <div className="confirm-user-card">
+                <div className="confirm-user-card__avatar" aria-hidden="true">
+                  {userToDelete.fullName.trim().charAt(0).toUpperCase()}
+                </div>
+                <div className="confirm-user-card__details">
+                  <strong>{userToDelete.fullName}</strong>
+                  <span>@{userToDelete.username}</span>
+                </div>
+                <span className="confirm-user-card__role">{userToDelete.role.replace(/_/g, ' ')}</span>
+              </div>
+
+              <div className="confirm-warning" id="delete-user-description">
+                <span className="confirm-warning__dot" />
+                <p>
+                  <strong>This action can’t be undone.</strong> The officer will lose access to their
+                  account and its associated permissions.
+                </p>
+              </div>
+
+              <div className="confirm-dialog__actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setUserToDelete(null)}
+                  disabled={deletingUserId !== null}
+                >
+                  Keep account
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger confirm-dialog__delete"
+                  onClick={() => void confirmDeleteOfficer()}
+                  disabled={deletingUserId !== null}
+                >
+                  {deletingUserId !== null ? (
+                    <>
+                      <LoaderCircle className="confirm-dialog__spinner" size={16} />
+                      Removing…
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Delete account
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </section>
         </div>
       )}
     </div>
