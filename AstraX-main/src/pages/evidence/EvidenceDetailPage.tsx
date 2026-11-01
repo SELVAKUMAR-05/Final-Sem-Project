@@ -118,6 +118,78 @@ export const EvidenceDetailPage: React.FC = () => {
     }
   };
 
+  const handlePrintCertificate = () => {
+    const certificate = document.getElementById('chain-certificate');
+    const printWindow = window.open('', '_blank');
+    if (!certificate || !printWindow) {
+      showToast(
+        certificate
+          ? 'Allow pop-ups for this site to print the chain of custody certificate.'
+          : 'The chain of custody certificate could not be prepared.',
+        'error'
+      );
+      return;
+    }
+
+    const printDocument = printWindow.document;
+    printDocument.open();
+    printDocument.write(`<!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1">
+          <title>Chain of Custody Certificate</title>
+          <style>
+            @page { size: A4 portrait; margin: 12mm; }
+            * { box-sizing: border-box; }
+            body { margin: 0; color: #1c2b3d; font: 9pt/1.45 "Segoe UI", Arial, Helvetica, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .certificate { width: 100%; }
+            .certificate-masthead { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding: 12px 15px; color: #fff; background: #142d4b; border-bottom: 4px solid #bd9855; }
+            .certificate-brand-wrap { display: flex; align-items: center; gap: 11px; }
+            .certificate-monogram { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid #d6bd8b; border-radius: 50%; color: #f3dfb2; font-family: Georgia, serif; font-size: 12pt; font-weight: 700; letter-spacing: -.08em; }
+            .certificate-brand { color: #fff; font-size: 13pt; font-weight: 800; letter-spacing: .09em; }
+            .certificate-subbrand { margin-top: 3px; color: #d3deea; font-size: 7pt; text-transform: uppercase; letter-spacing: .13em; }
+            .certificate-copy { padding: 6px 9px; border: 1px solid #d6bd8b; color: #f3dfb2; font-size: 7pt; font-weight: 700; letter-spacing: .08em; text-align: center; text-transform: uppercase; }
+            .certificate-heading { margin: 20px 0 13px; text-align: center; }
+            .certificate-eyebrow { color: #9a773b; font-size: 7pt; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; }
+            .certificate-title { margin: 4px 0 3px; color: #142d4b; font-family: Georgia, "Times New Roman", serif; font-size: 21pt; font-weight: 700; letter-spacing: .02em; }
+            .certificate-subtitle { margin: 0; color: #65758a; font-size: 8pt; }
+            .certificate-identity { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; margin: 0 0 10px; padding: 12px 15px; border: 1px solid #c8d3df; border-left: 4px solid #bd9855; background: #f4f7fa; }
+            .certificate-identity-id { color: #142d4b; font-family: "Courier New", monospace; font-size: 17pt; font-weight: 700; letter-spacing: .04em; }
+            .certificate-identity-case { margin-top: 3px; color: #52647a; font-size: 8pt; }
+            .certificate-status { padding: 6px 10px; border: 1px solid #a9c5b7; background: #edf6f1; color: #256246; font-size: 7pt; font-weight: 800; letter-spacing: .06em; text-align: center; text-transform: uppercase; }
+            .certificate-meta { display: grid; grid-template-columns: 1fr 1fr; margin-bottom: 16px; border: 1px solid #d5dce4; }
+            .certificate-meta > div { padding: 6px 9px; }
+            .certificate-meta > div + div { border-left: 1px solid #d5dce4; }
+            .certificate-label { display: block; margin-bottom: 2px; color: #718096; font-size: 6.5pt; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+            .certificate-value { overflow-wrap: anywhere; color: #24364b; font-size: 8pt; font-weight: 600; }
+            .certificate-section { margin: 15px 0; }
+            .certificate-section h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; padding-bottom: 6px; border-bottom: 1px solid #d7dee7; color: #183b63; font-size: 8.5pt; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+            .certificate-section h2::before { content: ""; width: 4px; height: 13px; background: #bd9855; }
+            .certificate-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 7.5pt; }
+            .certificate-table th, .certificate-table td { padding: 6px 7px; border: 1px solid #d5dce4; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+            .certificate-table th { background: #edf2f7; color: #344a63; font-size: 6.5pt; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+            .certificate-table thead th { padding-top: 7px; padding-bottom: 7px; background: #1d3b5d; color: #fff; }
+            .certificate-table tbody tr:nth-child(even) td { background: #f8fafc; }
+            .certificate-table tr { break-inside: avoid; page-break-inside: avoid; }
+            .certificate-note { margin-top: 14px; padding: 9px 11px; border: 1px solid #d9c99f; border-left: 4px solid #bd9855; background: #fbf8f0; color: #4a4b46; font-size: 7.5pt; }
+            .certificate-note strong { display: block; margin-bottom: 3px; color: #735a2d; font-size: 7pt; letter-spacing: .08em; text-transform: uppercase; }
+            .certificate-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 35px; margin-top: 34px; }
+            .certificate-signature-line { height: 23px; border-bottom: 1px solid #8391a1; }
+            .certificate-signature { padding-top: 6px; color: #344a63; font-size: 7.5pt; font-weight: 700; }
+            .certificate-signature span { display: block; margin-top: 2px; color: #7a8796; font-size: 6.5pt; font-weight: 400; }
+            .certificate-footer { margin-top: 17px; padding-top: 7px; border-top: 1px solid #d5dce4; color: #718096; font-size: 6.5pt; text-align: center; letter-spacing: .04em; }
+          </style>
+        </head>
+        <body></body>
+      </html>`);
+    printDocument.close();
+    printDocument.body.appendChild(certificate.cloneNode(true));
+    printWindow.addEventListener('afterprint', () => printWindow.close(), { once: true });
+    printWindow.focus();
+    printWindow.print();
+  };
+
   if (loading) {
     return (
       <div>
@@ -144,6 +216,137 @@ export const EvidenceDetailPage: React.FC = () => {
 
   return (
     <div>
+      <div style={{ display: 'none' }} aria-hidden="true">
+        <article id="chain-certificate" className="certificate">
+          <header className="certificate-masthead">
+            <div className="certificate-brand-wrap">
+              <span className="certificate-monogram">AX</span>
+              <div>
+              <div className="certificate-brand">ASTRAX EVIDENCE REGISTRY</div>
+              <div className="certificate-subbrand">Evidence management &amp; custody record</div>
+              </div>
+            </div>
+            <div className="certificate-copy">Evidence<br />custody record</div>
+          </header>
+
+          <div className="certificate-heading">
+            <div className="certificate-eyebrow">Official evidence record</div>
+            <h1 className="certificate-title">Chain of Custody</h1>
+            <p className="certificate-subtitle">Evidence collection particulars &amp; chronological custody register</p>
+          </div>
+
+          <section className="certificate-identity" aria-label="Primary evidence identification">
+            <div>
+              <span className="certificate-label">Evidence exhibit reference</span>
+              <div className="certificate-identity-id">{evidence.evidenceId}</div>
+              <div className="certificate-identity-case">Case / docket: <strong>{evidence.caseNumber}</strong></div>
+            </div>
+            <div className="certificate-status">{evidence.status.replace(/_/g, ' ')}</div>
+          </section>
+
+          <section className="certificate-meta" aria-label="Certificate details">
+            <div><span className="certificate-label">Certificate generated</span><span className="certificate-value">{new Date().toLocaleString()}</span></div>
+            <div><span className="certificate-label">Custody entries recorded</span><span className="certificate-value">{custodyLogs.length || 1} {custodyLogs.length === 1 ? 'entry' : 'entries'}</span></div>
+          </section>
+
+          <section className="certificate-section">
+            <h2>Exhibit identification &amp; collection</h2>
+            <table className="certificate-table">
+              <tbody>
+                <tr>
+                  <th scope="row">Description</th>
+                  <td>{evidence.description || 'Not recorded'}</td>
+                  <th scope="row">Evidence type</th>
+                  <td>{evidence.evidenceType}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Collected by</th>
+                  <td>{evidence.collectedBy}</td>
+                  <th scope="row">Collection date &amp; time</th>
+                  <td>{new Date(evidence.collectionDateTime).toLocaleString()}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Collection location</th>
+                  <td>{evidence.collectionLocation || 'Not recorded'}</td>
+                  <th scope="row">Seal / package reference</th>
+                  <td>{evidence.sealNumber || 'Not recorded'}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Condition at registration</th>
+                  <td>{evidence.condition || 'Not recorded'}</td>
+                  <th scope="row">Seal alert status</th>
+                  <td>{evidence.isTampered ? 'Tamper alert recorded' : 'No tamper alert recorded; not independently verified by printing'}</td>
+                </tr>
+                {evidence.sha256Hash && (
+                  <tr>
+                    <th scope="row">SHA-256 evidence hash</th>
+                    <td colSpan={3} style={{ overflowWrap: 'anywhere', fontFamily: 'monospace' }}>{evidence.sha256Hash}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          <section className="certificate-section">
+            <h2>Chronological custody register ({custodyLogs.length} recorded {custodyLogs.length === 1 ? 'entry' : 'entries'})</h2>
+            <table className="certificate-table">
+              <thead>
+                <tr>
+                  <th scope="col">Step / status</th>
+                  <th scope="col">Date &amp; time / location</th>
+                  <th scope="col">Released by / from</th>
+                  <th scope="col">Received by / to</th>
+                  <th scope="col">Purpose, condition &amp; record</th>
+                </tr>
+              </thead>
+              <tbody>
+                {custodyLogs.length > 0 ? custodyLogs.map((log, index) => (
+                  <tr key={log.id || index}>
+                    <td>{index + 1}. {log.status || 'TRANSFER'}</td>
+                    <td>{new Date(log.transferDateTime || log.createdAt).toLocaleString()}<br />{log.location || 'Location not recorded'}</td>
+                    <td>{log.fromUser || evidence.collectedBy}{log.fromRole ? ` (${log.fromRole})` : ''}</td>
+                    <td>{log.toUser}{log.toRole ? ` (${log.toRole})` : ''}</td>
+                    <td>
+                      <strong>Reason:</strong> {log.transferReason || 'Not recorded'}<br />
+                      <strong>Condition before:</strong> {log.conditionBefore || 'Not recorded'}<br />
+                      <strong>Condition after:</strong> {log.conditionAfter || 'Not recorded'}<br />
+                      <strong>Seal:</strong> {evidence.sealNumber || 'Not recorded'}<br />
+                      <strong>Signature reference:</strong> {log.signature || 'Not recorded'}
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td>1. INITIAL COLLECTION</td>
+                    <td>{new Date(evidence.collectionDateTime).toLocaleString()}<br />{evidence.collectionLocation || 'Location not recorded'}</td>
+                    <td>Incident scene / recovery</td>
+                    <td>{evidence.collectedBy}</td>
+                    <td><strong>Condition:</strong> {evidence.condition || 'Not recorded'}<br /><strong>Seal:</strong> {evidence.sealNumber || 'Not recorded'}<br /><strong>Signature reference:</strong> Not recorded</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </section>
+
+          <p className="certificate-note">
+            <strong>Important record notice</strong>
+            This document is a system-generated snapshot of the custody information recorded in the AstraX Evidence Registry at the time shown above. It is not, by itself, a digital signature, independent integrity verification, or judicial certification. Verify the source record and any applicable signatures or seal status through the authorized process before relying on this document.
+          </p>
+
+          <div className="certificate-signatures">
+            <div className="certificate-signature">
+              <div className="certificate-signature-line" />
+              Prepared / produced by
+              <span>Authorized registry user · Name, signature &amp; date</span>
+            </div>
+            <div className="certificate-signature">
+              <div className="certificate-signature-line" />
+              Reviewed / received by
+              <span>Officer / receiving authority · Name, signature &amp; date</span>
+            </div>
+          </div>
+          <footer className="certificate-footer">Evidence reference: {evidence.evidenceId} &nbsp;|&nbsp; Case: {evidence.caseNumber} &nbsp;|&nbsp; End of record</footer>
+        </article>
+      </div>
       <Breadcrumbs
         items={[
           { label: 'Evidence', to: '/evidence' },
@@ -378,7 +581,7 @@ export const EvidenceDetailPage: React.FC = () => {
             </div>
 
             <button
-              onClick={() => window.print()}
+              onClick={handlePrintCertificate}
               className="btn btn-secondary"
               style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
             >

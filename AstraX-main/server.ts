@@ -1791,11 +1791,24 @@ app.post('/api/ai/assistant', authenticateJwt, async (req: AuthenticatedRequest,
     }
 
     const db = getDb();
+    const normalizedMessage = message.trim().toLowerCase();
+    const isVaultQuestion = /\b(case|docket|document|file|filing|evidence|exhibit|custody|vault|record|investigation|officer|registry|forensic|status|pattern)\b/i.test(message);
+    const asksCrossCaseAnalysis = /\b(pattern|trend|across|link|common|similar|repeat|correlat)\w*/i.test(message);
+    const referencedCases = db.cases.filter((c) =>
+      normalizedMessage.includes(c.caseNumber.toLowerCase()) ||
+      normalizedMessage.includes(c.title.toLowerCase())
+    );
+    const referencedCaseIds = new Set(referencedCases.map((c) => c.id));
+    const hasSpecificCase = referencedCaseIds.size > 0;
+    const asksAboutDocuments = /\b(document|file|filing|paperwork)\b/i.test(message);
+    const asksAboutEvidence = /\b(evidence|exhibit|seizure|custody)\b/i.test(message);
+    const asksAboutCases = hasSpecificCase || asksCrossCaseAnalysis ||
+      /\b(case|docket|investigation|officer|priority)\b/i.test(message);
     const caseNumberOf = (caseId?: number) =>
       db.cases.find((c) => c.id === caseId)?.caseNumber || 'UNLINKED';
 
     const context = {
-      cases: db.cases.map((c) => ({
+      cases: !isVaultQuestion || !asksAboutCases ? [] : (hasSpecificCase ? referencedCases : db.cases).map((c) => ({
         caseNumber: c.caseNumber,
         title: c.title,
         description: c.description,
@@ -1808,18 +1821,21 @@ app.post('/api/ai/assistant', authenticateJwt, async (req: AuthenticatedRequest,
         registeredDate: c.createdAt,
         updatedAt: c.updatedAt,
       })),
-      documents: db.documents
+      documents: !isVaultQuestion || (!asksAboutDocuments && !hasSpecificCase && !asksCrossCaseAnalysis) ? [] : db.documents
         .filter((d) => canUserViewDocument(req.user!.role, d.documentType, d.classification))
+        .filter((d) => !hasSpecificCase || referencedCaseIds.has(d.caseId))
         .map((d) => ({
         documentName: d.documentName,
         originalFilename: d.originalFilename,
         documentType: d.documentType,
         workflowStatus: d.workflowStatus,
         classification: d.classification,
-        extractedText: (d.extractedText || '').slice(0, 12000),
+        extractedText: hasSpecificCase ? (d.extractedText || '').slice(0, 2000) : '',
         caseNumber: caseNumberOf(d.caseId),
       })),
-      evidence: db.evidence.map((e) => ({
+      evidence: !isVaultQuestion || (!asksAboutEvidence && !hasSpecificCase && !asksCrossCaseAnalysis) ? [] : db.evidence
+        .filter((e) => !hasSpecificCase || referencedCaseIds.has(e.caseId))
+        .map((e) => ({
         evidenceId: e.evidenceId,
         evidenceType: e.evidenceType,
         description: e.description,
@@ -1839,8 +1855,8 @@ app.post('/api/ai/assistant', authenticateJwt, async (req: AuthenticatedRequest,
     const safeHistory = Array.isArray(history)
       ? history
           .filter((m: any) => m && typeof m.content === 'string' && (m.role === 'user' || m.role === 'assistant'))
-          .slice(-6)
-          .map((m: any) => ({ role: m.role, content: m.content.slice(0, 2000) }))
+          .slice(-4)
+          .map((m: any) => ({ role: m.role, content: m.content.slice(0, 1000) }))
       : [];
 
     const result = await AIService.chatAssistant(message.trim().slice(0, 2000), safeHistory, context);

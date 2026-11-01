@@ -33,6 +33,7 @@ export const EvidencePage: React.FC = () => {
   const [casesLoading, setCasesLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [caseFilter, setCaseFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage = 8;
 
@@ -113,7 +114,11 @@ export const EvidencePage: React.FC = () => {
     }
   };
 
-  const filteredEvidence = evidenceList.filter((ev) => {
+  const caseEvidenceList = evidenceList.filter((ev) => (
+    caseFilter === 'ALL' || ev.caseId === Number(caseFilter)
+  ));
+
+  const filteredEvidence = caseEvidenceList.filter((ev) => {
     const matchesSearch =
       ev.evidenceId.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ev.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -131,10 +136,10 @@ export const EvidencePage: React.FC = () => {
     currentPage * itemsPerPage
   );
 
-  const totalCount = evidenceList.length;
-  const underExamCount = evidenceList.filter((e) => e.status === 'UNDER_FORENSIC_EXAMINATION').length;
-  const inCourtCount = evidenceList.filter((e) => e.status === 'PRESENTED_IN_COURT').length;
-  const tamperedCount = evidenceList.filter((e) => e.isTampered).length;
+  const totalCount = caseEvidenceList.length;
+  const underExamCount = caseEvidenceList.filter((e) => e.status === 'UNDER_FORENSIC_EXAMINATION').length;
+  const inCourtCount = caseEvidenceList.filter((e) => e.status === 'PRESENTED_IN_COURT').length;
+  const tamperedCount = caseEvidenceList.filter((e) => e.isTampered).length;
 
   return (
     <div>
@@ -151,16 +156,48 @@ export const EvidencePage: React.FC = () => {
           </p>
         </div>
 
-        {currentUser?.role !== 'LAWYER' && (
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary"
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '13px' }}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <label htmlFor="evidence-case-filter" style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+            Registered case:
+          </label>
+          <select
+            id="evidence-case-filter"
+            value={caseFilter}
+            onChange={(e) => {
+              setCaseFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            disabled={casesLoading}
+            style={{
+              maxWidth: '240px',
+              padding: '9px 12px',
+              fontSize: '13px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff'
+            }}
           >
-            <Plus size={16} />
-            <span>Register Evidence Exhibit</span>
-          </button>
-        )}
+            <option value="ALL">All Registered Cases</option>
+            {cases.map((registeredCase) => (
+              <option key={registeredCase.id} value={registeredCase.id}>
+                {registeredCase.caseNumber} — {registeredCase.title}
+              </option>
+            ))}
+          </select>
+          {currentUser?.role !== 'LAWYER' && (
+            <button
+              onClick={() => {
+                if (caseFilter !== 'ALL') setSelectedCaseId(caseFilter);
+                setShowCreateModal(true);
+              }}
+              className="btn btn-primary"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '13px' }}
+            >
+              <Plus size={16} />
+              <span>Register Evidence Exhibit</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Summary KPI Cards */}

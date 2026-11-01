@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext.tsx';
 import { api } from '../../services/api.ts';
-import { LegalDocument, DocumentType, WorkflowStatus } from '../../types.ts';
+import { Case, LegalDocument, DocumentType, WorkflowStatus } from '../../types.ts';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs.tsx';
 import { Pagination } from '../../components/common/Pagination.tsx';
 import { EmptyState } from '../../components/common/EmptyState.tsx';
@@ -29,10 +29,13 @@ export const DocumentsPage: React.FC = () => {
   const { showToast } = useToast();
 
   const [documents, setDocuments] = useState<LegalDocument[]>([]);
+  const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [casesLoading, setCasesLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [caseFilter, setCaseFilter] = useState<string>('ALL');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [showUploadModal, setShowUploadModal] = useState<boolean>(false);
   const itemsPerPage = 8;
@@ -50,11 +53,28 @@ export const DocumentsPage: React.FC = () => {
     }
   };
 
+  const fetchCases = async () => {
+    try {
+      const data = await api.getCases();
+      setCases(data);
+    } catch (err) {
+      console.error('Failed to load registered cases:', err);
+      showToast('Error loading registered cases', 'error');
+    } finally {
+      setCasesLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchDocuments();
+    fetchCases();
   }, []);
 
-  const filteredDocs = documents.filter((d) => {
+  const caseDocuments = documents.filter((d) => (
+    caseFilter === 'ALL' || d.caseId === Number(caseFilter)
+  ));
+
+  const filteredDocs = caseDocuments.filter((d) => {
     const matchesSearch =
       d.documentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       d.caseNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -72,9 +92,9 @@ export const DocumentsPage: React.FC = () => {
     currentPage * itemsPerPage
   );
 
-  const approvedCount = documents.filter((d) => d.workflowStatus === 'APPROVED' || d.workflowStatus === 'SIGNED').length;
-  const pendingCount = documents.filter((d) => d.workflowStatus === 'SUBMITTED' || d.workflowStatus === 'UNDER_REVIEW').length;
-  const tamperedCount = documents.filter((d) => d.isTampered).length;
+  const approvedCount = caseDocuments.filter((d) => d.workflowStatus === 'APPROVED' || d.workflowStatus === 'SIGNED').length;
+  const pendingCount = caseDocuments.filter((d) => d.workflowStatus === 'SUBMITTED' || d.workflowStatus === 'UNDER_REVIEW').length;
+  const tamperedCount = caseDocuments.filter((d) => d.isTampered).length;
 
   return (
     <div>
@@ -91,14 +111,43 @@ export const DocumentsPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="btn btn-primary"
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '13px' }}
-        >
-          <Plus size={16} />
-          <span>Upload Document</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <label htmlFor="document-case-filter" style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+            Registered case:
+          </label>
+          <select
+            id="document-case-filter"
+            value={caseFilter}
+            onChange={(e) => {
+              setCaseFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            disabled={casesLoading}
+            style={{
+              maxWidth: '240px',
+              padding: '9px 12px',
+              fontSize: '13px',
+              borderRadius: '8px',
+              border: '1px solid #cbd5e1',
+              background: '#ffffff'
+            }}
+          >
+            <option value="ALL">All Registered Cases</option>
+            {cases.map((registeredCase) => (
+              <option key={registeredCase.id} value={registeredCase.id}>
+                {registeredCase.caseNumber} — {registeredCase.title}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="btn btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '10px 18px', fontSize: '13px' }}
+          >
+            <Plus size={16} />
+            <span>Upload Document</span>
+          </button>
+        </div>
       </div>
 
       {/* Top Stat Summary Cards */}
@@ -108,7 +157,7 @@ export const DocumentsPage: React.FC = () => {
             Total Documents
           </div>
           <div style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', marginTop: '6px' }}>
-            {documents.length}
+            {caseDocuments.length}
           </div>
         </div>
 
@@ -351,6 +400,7 @@ export const DocumentsPage: React.FC = () => {
       {showUploadModal && (
         <DocumentUploadModal
           onClose={() => setShowUploadModal(false)}
+          preselectedCaseId={caseFilter === 'ALL' ? undefined : Number(caseFilter)}
           onSuccess={() => {
             setShowUploadModal(false);
             fetchDocuments();

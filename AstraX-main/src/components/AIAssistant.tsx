@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { api } from '../services/api.ts';
-import { Sparkles, X, Send, Bot, User as UserIcon, RefreshCw } from 'lucide-react';
+import { Sparkles, X, Send, Bot, User as UserIcon, RefreshCw, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import './AIAssistant.css';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -104,197 +105,91 @@ export const AIAssistant: React.FC = () => {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          title="AI Assistant — case summaries & pattern analysis"
-          style={{
-            position: 'fixed',
-            bottom: '48px',
-            right: '24px',
-            zIndex: 90,
-            width: '52px',
-            height: '52px',
-            borderRadius: '50%',
-            border: 'none',
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
-            color: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 6px 20px rgba(59, 130, 246, 0.45)',
-            transition: 'transform 0.15s',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.08)')}
-          onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+          title="Astrax AI — case summaries & pattern analysis"
+          aria-label="Open Astrax AI assistant"
+          className="astrax-ai-launcher"
         >
-          <Sparkles size={24} />
+          <Sparkles size={22} />
+          <span className="astrax-ai-launcher-label">Ask Astrax AI</span>
         </button>
       )}
 
       {/* Chat drawer */}
       {open && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '48px',
-            right: '24px',
-            zIndex: 90,
-            width: '400px',
-            maxWidth: 'calc(100vw - 48px)',
-            height: '560px',
-            maxHeight: 'calc(100vh - 96px)',
-            background: '#ffffff',
-            borderRadius: '14px',
-            border: '1px solid #cbd5e1',
-            boxShadow: '0 20px 50px rgba(2, 6, 23, 0.35)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
+        <section className="astrax-ai-panel" aria-label="Astrax AI assistant">
           {/* Header */}
-          <div
-            style={{
-              background: '#07162c',
-              color: '#ffffff',
-              padding: '12px 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  background: 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Bot size={18} />
+          <div className="astrax-ai-header">
+            <div className="astrax-ai-brand">
+              <div className="astrax-ai-brand-icon">
+                <Bot size={20} />
+                <span className="astrax-ai-brand-sparkle"><Sparkles size={10} /></span>
               </div>
-              <div>
-                <div style={{ fontSize: '14px', fontWeight: 800 }}>NyayaSahayak AI</div>
-                <div style={{ fontSize: '10px', color: '#93c5fd' }}>
-                  Vault records & general questions
-                </div>
+              <div className="astrax-ai-brand-copy">
+                <div className="astrax-ai-name">Astrax AI</div>
+                <div className="astrax-ai-presence"><span /> Evidence &amp; case intelligence</div>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '4px' }}>
-              <button
-                onClick={() => setMessages([])}
-                title="Clear conversation"
-                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '6px' }}
-              >
-                <RefreshCw size={15} />
-              </button>
+            <div className="astrax-ai-header-actions">
+              {messages.length > 0 && (
+                <button
+                  onClick={() => {
+                    setMessages([]);
+                    setError(null);
+                  }}
+                  title="Clear conversation"
+                  aria-label="Clear conversation"
+                  className="astrax-ai-icon-button"
+                >
+                  <RefreshCw size={16} />
+                </button>
+              )}
               <button
                 onClick={() => setOpen(false)}
-                title="Close"
-                style={{ background: 'none', border: 'none', color: '#cbd5e1', cursor: 'pointer', padding: '6px' }}
+                title="Close assistant"
+                aria-label="Close assistant"
+                className="astrax-ai-icon-button"
               >
-                <X size={17} />
+                <X size={18} />
               </button>
             </div>
           </div>
 
           {/* Messages */}
-          <div
-            ref={bodyRef}
-            style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '14px',
-              background: '#f8fafc',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '10px',
-            }}
-          >
+          <div ref={bodyRef} className="astrax-ai-messages" aria-live="polite">
             {showSuggestions && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <div style={{ fontSize: '12px', color: '#64748b', marginBottom: '2px' }}>
-                  Ask about accessible case records, documents, or anything else:
+              <div className="astrax-ai-welcome">
+                <div className="astrax-ai-welcome-mark"><Sparkles size={21} /></div>
+                <div className="astrax-ai-eyebrow">YOUR SECURE WORKSPACE ASSISTANT</div>
+                <h2>How can I help?</h2>
+                <p>Explore authorized case records, summarize activity, or ask a general question.</p>
+                <div className="astrax-ai-suggestions-heading">TRY ASKING</div>
+                <div className="astrax-ai-suggestions">
+                  {SUGGESTIONS.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      onClick={() => send(suggestion)}
+                      className="astrax-ai-suggestion"
+                    >
+                      <span>{suggestion}</span>
+                      <ArrowUpRight size={15} />
+                    </button>
+                  ))}
                 </div>
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => send(s)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '9px 12px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      color: '#1d4ed8',
-                      background: '#eff6ff',
-                      border: '1px solid #bfdbfe',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {s}
-                  </button>
-                ))}
               </div>
             )}
 
             {messages.map((m, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'flex',
-                  gap: '8px',
-                  alignItems: 'flex-start',
-                  flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
-                }}
-              >
-                <div
-                  style={{
-                    width: '26px',
-                    height: '26px',
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: m.role === 'user' ? '#1d4ed8' : 'linear-gradient(135deg, #1d4ed8 0%, #7c3aed 100%)',
-                    color: '#ffffff',
-                    marginTop: '2px',
-                  }}
-                >
+              <div key={i} className={`astrax-ai-message astrax-ai-message-${m.role}`}>
+                <div className={`astrax-ai-avatar astrax-ai-avatar-${m.role}`}>
                   {m.role === 'user' ? <UserIcon size={13} /> : <Bot size={13} />}
                 </div>
-                <div
-                  style={{
-                    maxWidth: '82%',
-                    padding: '9px 12px',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    lineHeight: 1.55,
-                    background: m.role === 'user' ? '#1d4ed8' : '#ffffff',
-                    color: m.role === 'user' ? '#ffffff' : '#1e293b',
-                    border: m.role === 'user' ? 'none' : '1px solid #e2e8f0',
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {renderContent(m.content)}
+                <div className="astrax-ai-message-content">
+                  <div className="astrax-ai-message-author">{m.role === 'assistant' ? 'Astrax AI' : 'You'}</div>
+                  <div className="astrax-ai-message-text">{renderContent(m.content)}</div>
                   {m.role === 'assistant' && m.source && (
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        paddingTop: '6px',
-                        borderTop: '1px solid #f1f5f9',
-                        fontSize: '9px',
-                        fontWeight: 700,
-                        letterSpacing: '0.5px',
-                        color: m.source === 'openrouter' ? '#7c3aed' : '#64748b',
-                      }}
-                    >
-                      {m.source === 'openrouter' ? 'OPENROUTER AI' : 'LOCAL ANALYTIC ENGINE'} &bull; VERIFY BEFORE USE
+                    <div className="astrax-ai-source">
+                      <ShieldCheck size={12} />
+                      {m.source === 'openrouter' ? 'AI RESPONSE' : 'LOCAL RECORD ANALYSIS'} · VERIFY BEFORE USE
                     </div>
                   )}
                 </div>
@@ -302,77 +197,54 @@ export const AIAssistant: React.FC = () => {
             ))}
 
             {loading && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '12px' }}>
-                <div
-                  style={{
-                    width: '14px',
-                    height: '14px',
-                    border: '2px solid #e2e8f0',
-                    borderTopColor: '#1d4ed8',
-                    borderRadius: '50%',
-                    animation: 'spin 0.7s linear infinite',
-                  }}
-                />
-                Analyzing vault records...
+              <div className="astrax-ai-thinking">
+                <div className="astrax-ai-avatar astrax-ai-avatar-assistant"><Bot size={13} /></div>
+                <div className="astrax-ai-thinking-bubble">
+                  <span /><span /><span />
+                  <span className="astrax-ai-thinking-label">Reviewing authorized records</span>
+                </div>
               </div>
             )}
 
             {error && (
-              <div style={{ fontSize: '12px', color: '#b91c1c', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', padding: '8px 10px' }}>
-                {error}
+              <div className="astrax-ai-error" role="alert">
+                <strong>Couldn’t complete that request</strong>
+                <span>{error}</span>
               </div>
             )}
           </div>
 
           {/* Input */}
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              send(input);
-            }}
-            style={{
-              padding: '10px 12px',
-              borderTop: '1px solid #e2e8f0',
-              background: '#ffffff',
-              display: 'flex',
-              gap: '8px',
-            }}
-          >
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about a case, a document, or a general question"
-              style={{
-                flex: 1,
-                padding: '9px 12px',
-                fontSize: '12px',
-                border: '1px solid #cbd5e1',
-                borderRadius: '8px',
-                outline: 'none',
-                boxSizing: 'border-box',
+          <div className="astrax-ai-composer-area">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                send(input);
               }}
-            />
-            <button
-              type="submit"
-              disabled={loading || !input.trim()}
-              style={{
-                background: '#1d4ed8',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                width: '38px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-                opacity: loading || !input.trim() ? 0.5 : 1,
-              }}
+              className="astrax-ai-composer"
             >
-              <Send size={15} />
-            </button>
-          </form>
-        </div>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask about a case, document, or more..."
+                aria-label="Message Astrax AI"
+              />
+              <button
+                type="submit"
+                disabled={loading || !input.trim()}
+                aria-label="Send message"
+                title="Send message"
+              >
+                <Send size={17} />
+              </button>
+            </form>
+            <div className="astrax-ai-composer-note">
+              <ShieldCheck size={12} />
+              AI responses can be inaccurate. Verify important information.
+            </div>
+          </div>
+        </section>
       )}
     </>
   );
