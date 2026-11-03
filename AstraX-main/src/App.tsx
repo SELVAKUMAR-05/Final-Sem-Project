@@ -227,7 +227,7 @@ const AppRoutes: React.FC = () => {
         <Route
           path="/integrity-lab"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={['ADMIN']}>
               <AppLayout onOpenUploadModal={() => setShowUploadModal(true)}>
                 <IntegrityLab initialDocument={targetIntegrityDoc} />
               </AppLayout>

@@ -69,8 +69,6 @@ import {
   JWTPayload,
 } from './server/security.ts';
 import { addAuditLog, getAuditLogCount, getAuditLogs, verifyAuditChain, toggleAuditTamperSimulation } from './server/audit.ts';
-import { extractTextFromBuffer } from './server/ocr.ts';
-import { createWatermarkedPdf } from './server/pdf-export.ts';
 import { AIService } from './server/ai.ts';
 import { UserRole, DocumentType, CaseStatus } from './src/types.ts';
 
@@ -882,6 +880,7 @@ app.post(
       const sha256Hash = computeSha256(req.file.buffer);
 
       // OCR & Keyword Extraction
+      const { extractTextFromBuffer } = await import('./server/ocr.ts');
       const ocrData = await extractTextFromBuffer(req.file.buffer, originalFilename, req.file.mimetype);
       fs.writeFileSync(finalPath, req.file.buffer);
 
@@ -970,6 +969,7 @@ app.get('/api/documents/:id/download', authenticateJwt, async (req: Authenticate
       fullName: req.user!.fullName,
       role: req.user!.role,
     });
+    const { createWatermarkedPdf } = await import('./server/pdf-export.ts');
     const pdf = await createWatermarkedPdf(
       source,
       doc.extractedText || doc.documentName,
@@ -1040,6 +1040,7 @@ app.post(
       const finalPath = path.join(caseFolder, storedFilename);
 
       const newHash = computeSha256(req.file.buffer);
+      const { extractTextFromBuffer } = await import('./server/ocr.ts');
       const ocrData = await extractTextFromBuffer(req.file.buffer, req.file.originalname, req.file.mimetype);
       fs.writeFileSync(finalPath, req.file.buffer);
 
@@ -2026,6 +2027,7 @@ app.get('/api/documents/:id/download-watermarked', authenticateJwt, async (req: 
 
   try {
     const source = fs.existsSync(doc.filePath) ? fs.readFileSync(doc.filePath) : null;
+    const { createWatermarkedPdf } = await import('./server/pdf-export.ts');
     const pdf = await createWatermarkedPdf(
       source,
       doc.extractedText || doc.documentName,
