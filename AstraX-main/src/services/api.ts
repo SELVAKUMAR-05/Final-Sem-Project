@@ -164,6 +164,13 @@ export const api = {
     return request<User>('/api/auth/me');
   },
 
+  async updateProfileName(fullName: string): Promise<User> {
+    return request<User>('/api/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify({ fullName }),
+    });
+  },
+
   async getProfilePhoto(): Promise<Blob | null> {
     const token = getStoredToken();
     const response = await fetch('/api/auth/me/photo', {

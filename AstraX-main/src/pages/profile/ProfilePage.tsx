@@ -3,7 +3,6 @@ import { useAuth } from '../../context/AuthContext.tsx';
 import { Breadcrumbs } from '../../components/common/Breadcrumbs.tsx';
 import { useToast } from '../../components/common/Toast.tsx';
 import {
-  User,
   ShieldCheck,
   KeyRound,
   FileCheck,
@@ -13,6 +12,8 @@ import {
   CheckCircle2,
   Calendar,
   Camera,
+  Pencil,
+  Save,
   X,
   Move,
   ZoomIn
@@ -34,7 +35,7 @@ const CROP_VIEW_SIZE = 280;
 const CROP_OUTPUT_SIZE = 512;
 
 export const ProfilePage: React.FC = () => {
-  const { currentUser, profilePhotoUrl, uploadProfilePhoto } = useAuth();
+  const { currentUser, profilePhotoUrl, uploadProfilePhoto, updateProfileName } = useAuth();
   const { showToast } = useToast();
   const photoInputRef = useRef<HTMLInputElement>(null);
   const cropImageRef = useRef<CropImage | null>(null);
@@ -43,6 +44,13 @@ export const ProfilePage: React.FC = () => {
   const [cropZoom, setCropZoom] = useState(1);
   const [cropOffset, setCropOffset] = useState<CropOffset>({ x: 0, y: 0 });
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [fullName, setFullName] = useState(currentUser?.fullName ?? '');
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isSavingName, setIsSavingName] = useState(false);
+
+  useEffect(() => {
+    setFullName(currentUser?.fullName ?? '');
+  }, [currentUser?.fullName]);
 
   useEffect(() => () => {
     if (cropImageRef.current) URL.revokeObjectURL(cropImageRef.current.url);
@@ -184,6 +192,35 @@ export const ProfilePage: React.FC = () => {
     }
   };
 
+  const saveProfileName = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const updatedName = fullName.trim();
+    if (!updatedName) {
+      showToast('Name is required.', 'error');
+      return;
+    }
+    if (updatedName.length > 100) {
+      showToast('Name must be 100 characters or fewer.', 'error');
+      return;
+    }
+    if (updatedName === currentUser?.fullName) {
+      setIsEditingName(false);
+      return;
+    }
+
+    try {
+      setIsSavingName(true);
+      await updateProfileName(updatedName);
+      setIsEditingName(false);
+      showToast('Name updated successfully.', 'success');
+    } catch (error) {
+      console.error('Failed to update profile name:', error);
+      showToast(error instanceof Error ? error.message : 'Unable to update your name.', 'error');
+    } finally {
+      setIsSavingName(false);
+    }
+  };
+
   return (
     <div>
       <Breadcrumbs items={[{ label: 'Officer Profile & Credentials' }]} />
@@ -260,9 +297,60 @@ export const ProfilePage: React.FC = () => {
             JPEG, PNG, or WebP · up to 5 MB · crop before saving
           </div>
 
-          <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
-            {currentUser?.fullName || 'Investigating Officer'}
-          </h2>
+          {isEditingName ? (
+            <form onSubmit={saveProfileName} style={{ marginBottom: '8px' }}>
+              <label htmlFor="profile-full-name" style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                Edit your name
+              </label>
+              <input
+                id="profile-full-name"
+                type="text"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                maxLength={100}
+                required
+                autoFocus
+                autoComplete="name"
+                style={{ width: '100%', boxSizing: 'border-box', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '14px', marginBottom: '8px' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+                <button
+                  type="submit"
+                  className="btn btn-primary btn-sm"
+                  disabled={isSavingName || !fullName.trim()}
+                >
+                  <Save size={14} />
+                  {isSavingName ? 'Saving...' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => {
+                    setFullName(currentUser?.fullName ?? '');
+                    setIsEditingName(false);
+                  }}
+                  disabled={isSavingName}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}>
+              <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                {currentUser?.fullName || 'Investigating Officer'}
+              </h2>
+              <button
+                type="button"
+                onClick={() => setIsEditingName(true)}
+                aria-label="Edit name"
+                title="Edit name"
+                style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '5px', color: '#475569', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+              >
+                <Pencil size={15} />
+              </button>
+            </div>
+          )}
 
           <div
             style={{

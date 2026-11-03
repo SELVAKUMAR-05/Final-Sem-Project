@@ -20,6 +20,7 @@ export interface AuthContextType {
   forgotPassword: (email: string) => Promise<{ status: number; message: string }>;
   logout: () => void;
   switchRoleShortcut: (role: UserRole) => Promise<void>;
+  updateProfileName: (fullName: string) => Promise<void>;
   uploadProfilePhoto: (photo: File) => Promise<void>;
   unauthorizedAlert: string | null;
   setUnauthorizedAlert: (msg: string | null) => void;
@@ -130,6 +131,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setProfilePhotoVersion((version) => version + 1);
   };
 
+  const updateProfileName = async (fullName: string) => {
+    const updatedUser = await api.updateProfileName(fullName);
+    setCurrentUser(updatedUser);
+  };
+
   const login = async (username: string, password: string): Promise<User> => {
     setIsLoading(true);
     setUnauthorizedAlert(null);
@@ -193,6 +199,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         forgotPassword,
         logout,
         switchRoleShortcut,
+        updateProfileName,
         uploadProfilePhoto,
         unauthorizedAlert,
         setUnauthorizedAlert,

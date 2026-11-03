@@ -164,11 +164,12 @@ function authenticateJwt(req: AuthenticatedRequest, res: Response, next: NextFun
     return res.status(401).json({ status: 401, message: 'Session expired or invalid token. Please log in again.' });
   }
 
-  if (!findUserById(payload.userId)) {
+  const user = findUserById(payload.userId);
+  if (!user) {
     return res.status(401).json({ status: 401, message: 'This account no longer exists. Please log in again.' });
   }
 
-  req.user = payload;
+  req.user = { ...payload, fullName: user.fullName };
   next();
 }
 
@@ -265,6 +266,37 @@ app.get('/api/auth/me', authenticateJwt, (req: AuthenticatedRequest, res: Respon
   if (!user) {
     return res.status(404).json({ status: 404, message: 'User not found' });
   }
+  return res.json(user);
+});
+
+app.put('/api/auth/me', authenticateJwt, (req: AuthenticatedRequest, res: Response) => {
+  const fullName = typeof req.body?.fullName === 'string' ? req.body.fullName.trim() : '';
+  if (!fullName) {
+    return res.status(400).json({ status: 400, message: 'Name is required.' });
+  }
+  if (fullName.length > 100) {
+    return res.status(400).json({ status: 400, message: 'Name must be 100 characters or fewer.' });
+  }
+
+  const user = findUserById(req.user!.userId);
+  if (!user) {
+    return res.status(404).json({ status: 404, message: 'User not found.' });
+  }
+
+  const previousFullName = user.fullName;
+  user.fullName = fullName;
+  persistDatabase();
+
+  addAuditLog({
+    userId: user.id,
+    username: user.username,
+    role: user.role,
+    action: 'PROFILE_NAME_UPDATED',
+    ipAddress: req.ip || req.socket.remoteAddress || '127.0.0.1',
+    description: `User updated profile name from "${previousFullName}" to "${fullName}".`,
+    status: 'SUCCESS',
+  });
+
   return res.json(user);
 });
 
