@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext.tsx';
 import { UserRole, Notification } from '../types.ts';
 import { api } from '../services/api.ts';
+import { DEMO_CREDENTIALS } from '../context/AuthContext.tsx';
 import { Lock, UserCircle, LogOut, KeyRound, AlertTriangle, Bell, CheckCircle2, Search } from 'lucide-react';
 
 interface HeaderProps {
@@ -10,7 +11,7 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onNavigate }) => {
-  const { currentUser, profilePhotoUrl, logout, switchRoleShortcut, unauthorizedAlert, setUnauthorizedAlert } = useAuth();
+  const { currentUser, demoUserNames, profilePhotoUrl, logout, switchRoleShortcut, unauthorizedAlert, setUnauthorizedAlert } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -96,12 +97,11 @@ export const Header: React.FC<HeaderProps> = ({ onOpenLogin, onNavigate }) => {
                   title="Switch role to test permissions and workflows"
                   id="role-switcher-dropdown"
                 >
-                  <option value="ADMIN">ADMIN (Dr. Rajesh Sharma)</option>
-                  <option value="POLICE_OFFICER">POLICE OFFICER (Insp. Arumugam)</option>
-                  <option value="INVESTIGATION_OFFICER">INVESTIGATION OFFICER (DSP Sunita Rao)</option>
-                  <option value="FORENSIC_OFFICER">FORENSIC OFFICER (Dr. Priya Nambiar)</option>
-                  <option value="LAWYER">LAWYER (Adv. Vikram Malhotra)</option>
-                  <option value="COURT_OFFICER">COURT OFFICER (Justice Meenakshi)</option>
+                  {(Object.keys(DEMO_CREDENTIALS) as UserRole[]).map((role) => (
+                    <option key={role} value={role}>
+                      {role.replace(/_/g, ' ')} ({demoUserNames[role] || DEMO_CREDENTIALS[role].title})
+                    </option>
+                  ))}
                 </select>
               </div>
 

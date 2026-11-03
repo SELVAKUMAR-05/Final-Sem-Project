@@ -43,7 +43,7 @@ interface AppLayoutProps {
 }
 
 export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModal }) => {
-  const { currentUser, profilePhotoUrl, logout, switchRoleShortcut } = useAuth();
+  const { currentUser, demoUserNames, profilePhotoUrl, logout, switchRoleShortcut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -604,7 +604,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
                         {r.replace(/_/g, ' ')} {isCurrent && '✓'}
                       </span>
                       <span style={{ fontSize: '10px', color: '#64748b' }}>
-                        {DEMO_CREDENTIALS[r].title}
+                        {demoUserNames[r] || DEMO_CREDENTIALS[r].title}
                       </span>
                     </button>
                   );

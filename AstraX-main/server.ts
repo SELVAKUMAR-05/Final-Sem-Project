@@ -147,6 +147,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'AstraX', timestamp: new Date().toISOString() });
 });
 
+app.get('/api/demo-users', (_req: Request, res: Response) => {
+  const demoAccounts: Array<{ role: UserRole; email: string }> = [
+    { role: 'ADMIN', email: 'admin@secure-dms.local' },
+    { role: 'POLICE_OFFICER', email: 'police@secure-dms.local' },
+    { role: 'INVESTIGATION_OFFICER', email: 'investigator@secure-dms.local' },
+    { role: 'FORENSIC_OFFICER', email: 'forensic@secure-dms.local' },
+    { role: 'LAWYER', email: 'lawyer@secure-dms.local' },
+    { role: 'COURT_OFFICER', email: 'court@secure-dms.local' },
+  ];
+  const users = getDb().users;
+  const displayNames: Partial<Record<UserRole, string>> = {};
+
+  for (const account of demoAccounts) {
+    const user = users.find((candidate) => candidate.email.toLowerCase() === account.email);
+    if (user) displayNames[account.role] = user.fullName;
+  }
+
+  return res.json(displayNames);
+});
+
 // Authentication Middleware
 export interface AuthenticatedRequest extends Request {
   user?: JWTPayload;

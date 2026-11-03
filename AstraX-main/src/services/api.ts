@@ -19,6 +19,8 @@ import {
 
 const TOKEN_KEY = 'ncrb_dms_jwt_token';
 
+export type DemoUserNames = Partial<Record<UserRole, string>>;
+
 export function getStoredToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -162,6 +164,10 @@ export const api = {
 
   async getCurrentUser(): Promise<User> {
     return request<User>('/api/auth/me');
+  },
+
+  async getDemoUserNames(): Promise<DemoUserNames> {
+    return request<DemoUserNames>('/api/demo-users');
   },
 
   async updateProfileName(fullName: string): Promise<User> {

@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, UserRole } from '../types.ts';
-import { api, getStoredToken, setStoredToken } from '../services/api.ts';
+import { api, DemoUserNames, getStoredToken, setStoredToken } from '../services/api.ts';
 
 export interface AuthContextType {
   currentUser: User | null;
+  demoUserNames: DemoUserNames;
   profilePhotoUrl: string | null;
   token: string | null;
   isLoading: boolean;
@@ -70,11 +71,34 @@ export const DEMO_CREDENTIALS: Record<UserRole, { username: string; pass: string
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [demoUserNames, setDemoUserNames] = useState<DemoUserNames>(() => ({
+    ADMIN: DEMO_CREDENTIALS.ADMIN.title,
+    POLICE_OFFICER: DEMO_CREDENTIALS.POLICE_OFFICER.title,
+    INVESTIGATION_OFFICER: DEMO_CREDENTIALS.INVESTIGATION_OFFICER.title,
+    FORENSIC_OFFICER: DEMO_CREDENTIALS.FORENSIC_OFFICER.title,
+    LAWYER: DEMO_CREDENTIALS.LAWYER.title,
+    COURT_OFFICER: DEMO_CREDENTIALS.COURT_OFFICER.title,
+  }));
   const [token, setToken] = useState<string | null>(getStoredToken());
   const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   const [profilePhotoVersion, setProfilePhotoVersion] = useState(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [unauthorizedAlert, setUnauthorizedAlert] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    api.getDemoUserNames()
+      .then((names) => {
+        if (active) setDemoUserNames((current) => ({ ...current, ...names }));
+      })
+      .catch((error) => {
+        console.error('Failed to load current demo account names:', error);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     async function verifyExistingSession() {
@@ -134,6 +158,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfileName = async (fullName: string) => {
     const updatedUser = await api.updateProfileName(fullName);
     setCurrentUser(updatedUser);
+    const demoRole = (Object.keys(DEMO_CREDENTIALS) as UserRole[])
+      .find((role) => DEMO_CREDENTIALS[role].username === updatedUser.email);
+    if (demoRole) {
+      setDemoUserNames((current) => ({ ...current, [demoRole]: updatedUser.fullName }));
+    }
   };
 
   const login = async (username: string, password: string): Promise<User> => {
@@ -190,6 +219,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         currentUser,
+        demoUserNames,
         profilePhotoUrl,
         token,
         isLoading,

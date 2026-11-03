@@ -16,7 +16,7 @@ interface LoginModalProps {
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
-  const { login, switchRoleShortcut } = useAuth();
+  const { login, demoUserNames, switchRoleShortcut } = useAuth();
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -95,7 +95,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose }) => {
                   onClick={() => handleQuickDemoLogin(r)}
                   disabled={isLoading}
                 >
-                  &bull; {r.replace(/_/g, ' ')}
+                  &bull; {r.replace(/_/g, ' ')} — {demoUserNames[r] || DEMO_CREDENTIALS[r].title}
                 </button>
               ))}
             </div>

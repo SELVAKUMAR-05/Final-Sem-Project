@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 export const Login: React.FC = () => {
-  const { login, unauthorizedAlert } = useAuth();
+  const { login, demoUserNames, unauthorizedAlert } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -558,7 +558,7 @@ export const Login: React.FC = () => {
                       {r.replace('_', ' ')}
                     </div>
                     <div style={{ color: '#64748b', fontSize: '10px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {cred.title}
+                      {demoUserNames[r] || cred.title}
                     </div>
                   </button>
                 );
