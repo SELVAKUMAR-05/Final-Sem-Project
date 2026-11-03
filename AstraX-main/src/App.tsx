@@ -1,39 +1,36 @@
-import React, { useState } from 'react';
+import React, { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext.tsx';
 import { ToastProvider } from './components/common/Toast.tsx';
 import { ProtectedRoute } from './components/layout/ProtectedRoute.tsx';
-import { AppLayout } from './components/layout/AppLayout.tsx';
-import { Login } from './pages/auth/Login.tsx';
-import { Register } from './pages/auth/Register.tsx';
-import { ForgotPassword } from './pages/auth/ForgotPassword.tsx';
-
-// Dynamic Modern Pages
-import { DashboardPage } from './pages/dashboard/DashboardPage.tsx';
-import { CasesPage } from './pages/cases/CasesPage.tsx';
-import { CaseDetailPage } from './pages/cases/CaseDetailPage.tsx';
-import { DocumentsPage } from './pages/documents/DocumentsPage.tsx';
-import { DocumentDetailPage } from './pages/documents/DocumentDetailPage.tsx';
-import { EvidencePage } from './pages/evidence/EvidencePage.tsx';
-import { EvidenceDetailPage } from './pages/evidence/EvidenceDetailPage.tsx';
-import { AuditLogsPage } from './pages/audit/AuditLogsPage.tsx';
-import { SecurityPage } from './pages/security/SecurityPage.tsx';
-import { NotificationsPage } from './pages/notifications/NotificationsPage.tsx';
-import { ProfilePage } from './pages/profile/ProfilePage.tsx';
-import { SettingsPage } from './pages/settings/SettingsPage.tsx';
-import { AdminUsersPage } from './pages/admin/AdminUsersPage.tsx';
-
-// Specialized Operational Views
-import { EvidenceChainView } from './components/EvidenceChainView.tsx';
-import { CaseTimelineView } from './components/CaseTimelineView.tsx';
-import { RelationshipGraphView } from './components/RelationshipGraphView.tsx';
-import { CaseReportView } from './components/CaseReportView.tsx';
-import { IntegrityLab } from './components/IntegrityLab.tsx';
-import { DigitalSignatureView } from './components/DigitalSignatureView.tsx';
-import { SearchView } from './components/SearchView.tsx';
-import { HackathonDemoGuide } from './components/HackathonDemoGuide.tsx';
-import { DocumentUploadModal } from './components/DocumentUploadModal.tsx';
 import { LegalDocument } from './types.ts';
+
+const AppLayout = lazy(() => import('./components/layout/AppLayout.tsx').then((module) => ({ default: module.AppLayout })));
+const Login = lazy(() => import('./pages/auth/Login.tsx').then((module) => ({ default: module.Login })));
+const Register = lazy(() => import('./pages/auth/Register.tsx').then((module) => ({ default: module.Register })));
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword.tsx').then((module) => ({ default: module.ForgotPassword })));
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage.tsx').then((module) => ({ default: module.DashboardPage })));
+const CasesPage = lazy(() => import('./pages/cases/CasesPage.tsx').then((module) => ({ default: module.CasesPage })));
+const CaseDetailPage = lazy(() => import('./pages/cases/CaseDetailPage.tsx').then((module) => ({ default: module.CaseDetailPage })));
+const DocumentsPage = lazy(() => import('./pages/documents/DocumentsPage.tsx').then((module) => ({ default: module.DocumentsPage })));
+const DocumentDetailPage = lazy(() => import('./pages/documents/DocumentDetailPage.tsx').then((module) => ({ default: module.DocumentDetailPage })));
+const EvidencePage = lazy(() => import('./pages/evidence/EvidencePage.tsx').then((module) => ({ default: module.EvidencePage })));
+const EvidenceDetailPage = lazy(() => import('./pages/evidence/EvidenceDetailPage.tsx').then((module) => ({ default: module.EvidenceDetailPage })));
+const AuditLogsPage = lazy(() => import('./pages/audit/AuditLogsPage.tsx').then((module) => ({ default: module.AuditLogsPage })));
+const SecurityPage = lazy(() => import('./pages/security/SecurityPage.tsx').then((module) => ({ default: module.SecurityPage })));
+const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage.tsx').then((module) => ({ default: module.NotificationsPage })));
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage.tsx').then((module) => ({ default: module.ProfilePage })));
+const SettingsPage = lazy(() => import('./pages/settings/SettingsPage.tsx').then((module) => ({ default: module.SettingsPage })));
+const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage.tsx').then((module) => ({ default: module.AdminUsersPage })));
+const EvidenceChainView = lazy(() => import('./components/EvidenceChainView.tsx').then((module) => ({ default: module.EvidenceChainView })));
+const CaseTimelineView = lazy(() => import('./components/CaseTimelineView.tsx').then((module) => ({ default: module.CaseTimelineView })));
+const RelationshipGraphView = lazy(() => import('./components/RelationshipGraphView.tsx').then((module) => ({ default: module.RelationshipGraphView })));
+const CaseReportView = lazy(() => import('./components/CaseReportView.tsx').then((module) => ({ default: module.CaseReportView })));
+const IntegrityLab = lazy(() => import('./components/IntegrityLab.tsx').then((module) => ({ default: module.IntegrityLab })));
+const DigitalSignatureView = lazy(() => import('./components/DigitalSignatureView.tsx').then((module) => ({ default: module.DigitalSignatureView })));
+const SearchView = lazy(() => import('./components/SearchView.tsx').then((module) => ({ default: module.SearchView })));
+const HackathonDemoGuide = lazy(() => import('./components/HackathonDemoGuide.tsx').then((module) => ({ default: module.HackathonDemoGuide })));
+const DocumentUploadModal = lazy(() => import('./components/DocumentUploadModal.tsx').then((module) => ({ default: module.DocumentUploadModal })));
 
 const AppRoutes: React.FC = () => {
   const navigate = useNavigate();
@@ -61,6 +58,7 @@ const AppRoutes: React.FC = () => {
 
   return (
     <>
+      <Suspense fallback={<div role="status" style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#64748b' }}>Loading...</div>}>
       <Routes>
         {/* Public Authentication Routes */}
         <Route path="/login" element={<Login />} />
@@ -324,6 +322,7 @@ const AppRoutes: React.FC = () => {
           }}
         />
       )}
+      </Suspense>
     </>
   );
 };
