@@ -298,6 +298,12 @@ export class AIService {
     history: AssistantChatMessage[],
     context: AssistantContext
   ): Promise<AssistantReply> {
+    const requestsPatternAnalysis =
+      /\b(?:pattern|trend|across|connect|link|common|similar|repeat|correlat|analysis)\w*\b/i.test(message);
+    if (requestsPatternAnalysis) {
+      return { reply: this.localChat(message, context), source: 'local' };
+    }
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (apiKey && apiKey !== 'YOUR_OPENROUTER_API_KEY') {
       const reply = await this.openRouterChat(message, history, context, apiKey);
