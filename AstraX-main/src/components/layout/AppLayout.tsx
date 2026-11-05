@@ -50,6 +50,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(
     () => typeof window !== 'undefined' && window.matchMedia('(max-width: 760px)').matches
   );
+  const [aiAssistantMode, setAiAssistantMode] = useState<'closed' | 'full' | 'floating'>('closed');
   const [profileDropdownOpen, setProfileDropdownOpen] = useState<boolean>(false);
   const [roleSwitcherOpen, setRoleSwitcherOpen] = useState<boolean>(false);
   const [notificationsOpen, setNotificationsOpen] = useState<boolean>(false);
@@ -72,6 +73,10 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setAiAssistantMode((mode) => mode === 'full' ? 'closed' : mode);
+  }, [location.pathname]);
 
   // Fetch notifications
   const fetchNotifications = async () => {
@@ -957,6 +962,41 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
         }}>
           {/* Navigation Items */}
           <div style={{ padding: '16px 12px', overflowY: 'auto' }}>
+            <button
+              type="button"
+              onClick={() => {
+                setAiAssistantMode('full');
+                if (window.matchMedia('(max-width: 760px)').matches) {
+                  setSidebarCollapsed(true);
+                } else {
+                  setSidebarCollapsed(false);
+                }
+              }}
+              aria-label="Open AstraX AI assistant"
+              aria-expanded={aiAssistantMode === 'full'}
+              title={sidebarCollapsed ? 'AstraX AI' : undefined}
+              style={{
+                display: 'flex',
+                width: '100%',
+                alignItems: 'center',
+                gap: '12px',
+                padding: sidebarCollapsed ? '10px 0' : '10px 14px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                border: '1px solid rgba(129, 140, 248, 0.28)',
+                borderRadius: '8px',
+                marginBottom: '8px',
+                background: aiAssistantMode === 'full' ? '#3730a3' : 'rgba(79, 70, 229, 0.16)',
+                color: '#e0e7ff',
+                cursor: 'pointer',
+                font: 'inherit',
+                fontSize: '13px',
+                fontWeight: 700,
+                textAlign: 'left',
+              }}
+            >
+              <Sparkles size={18} color="#c4b5fd" />
+              {!sidebarCollapsed && <span>AstraX AI</span>}
+            </button>
             {navLinks.map((item, idx) => {
               if ((item as any).separator) {
                 if (sidebarCollapsed) return <div key={idx} style={{ height: '1px', background: '#1e293b', margin: '12px 0' }} />;
@@ -983,6 +1023,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
                   key={linkItem.to}
                   to={linkItem.to}
                   onClick={() => {
+                    setAiAssistantMode((mode) => mode === 'full' ? 'closed' : mode);
                     if (window.matchMedia('(max-width: 760px)').matches) setSidebarCollapsed(true);
                   }}
                   style={{
@@ -1145,7 +1186,7 @@ export const AppLayout: React.FC<AppLayoutProps> = ({ children, onOpenUploadModa
       </footer>
 
       {/* AI Assistant — available to all roles on every protected page */}
-      <AIAssistant />
+      <AIAssistant mode={aiAssistantMode} onModeChange={setAiAssistantMode} />
     </div>
   );
 };

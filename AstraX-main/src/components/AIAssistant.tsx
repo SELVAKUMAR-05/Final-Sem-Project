@@ -9,6 +9,11 @@ interface ChatMessage {
   source?: 'openrouter' | 'local';
 }
 
+interface AIAssistantProps {
+  mode: 'closed' | 'full' | 'floating';
+  onModeChange: (mode: 'closed' | 'full' | 'floating') => void;
+}
+
 const SUGGESTIONS = [
   'Summarize CASE-2026-001',
   'Find patterns across all cases',
@@ -16,54 +21,65 @@ const SUGGESTIONS = [
   'Evidence overview',
 ];
 
-// Minimal formatter: **bold**, `code`, newlines, bullets
-const renderContent = (text: string): React.ReactNode => {
-  return text.split('\n').map((line, i) => {
-    const formatted = line
-      .split(/(\*\*[^*]+\*\*|`[^`]+`)/g)
-      .map((part, j) => {
-        if (part.startsWith('**') && part.endsWith('**')) {
-          return (
-            <strong key={j} style={{ color: '#0b2545' }}>
-              {part.slice(2, -2)}
-            </strong>
-          );
-        }
-        if (part.startsWith('`') && part.endsWith('`')) {
-          return (
-            <code key={j} style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', background: '#f1f5f9', padding: '1px 4px', borderRadius: '3px' }}>
-              {part.slice(1, -1)}
-            </code>
-          );
-        }
-        return part;
-      });
+const renderInlineContent = (text: string): React.ReactNode[] =>
+  text.split(/(\*\*[^*]+\*\*|`[^`]+`|_[^_]+_)/g).map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={index}>{part.slice(1, -1)}</code>;
+    }
+    if (part.startsWith('_') && part.endsWith('_')) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
 
-    const isBullet = /^\s*-\s/.test(line);
-    const isItalic = /^_.+_$/.test(line.trim());
+const renderContent = (text: string): React.ReactNode =>
+  text.split('\n').map((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return <div key={index} className="astrax-ai-message-spacer" />;
 
+    const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      const HeadingTag = heading[1].length === 1 ? 'h3' : 'h4';
+      return <HeadingTag key={index} className="astrax-ai-response-heading">{renderInlineContent(heading[2])}</HeadingTag>;
+    }
+
+    const boldHeading = trimmed.match(/^\*\*(.+?)\*\*:?\s*$/);
+    if (boldHeading) {
+      return <h4 key={index} className="astrax-ai-response-subheading">{boldHeading[1].replace(/:$/, '')}</h4>;
+    }
+
+    const orderedItem = trimmed.match(/^(\d+)[.)]\s+(.+)$/);
+    if (orderedItem) {
+      return (
+        <div key={index} className="astrax-ai-response-list-item">
+          <span className="astrax-ai-response-list-marker">{orderedItem[1]}.</span>
+          <span>{renderInlineContent(orderedItem[2])}</span>
+        </div>
+      );
+    }
+
+    const bulletItem = trimmed.match(/^[-*•]\s+(.+)$/);
+    if (bulletItem) {
+      return (
+        <div key={index} className="astrax-ai-response-list-item">
+          <span className="astrax-ai-response-list-marker" aria-hidden="true">•</span>
+          <span>{renderInlineContent(bulletItem[1])}</span>
+        </div>
+      );
+    }
+
+    const isItalic = /^_.+_$/.test(trimmed);
     return (
-      <div
-        key={i}
-        style={{
-          paddingLeft: isBullet ? '14px' : '0',
-          position: 'relative',
-          marginBottom: '2px',
-          fontStyle: isItalic ? 'italic' : 'normal',
-          color: isItalic ? '#64748b' : 'inherit',
-        }}
-      >
-        {isBullet && (
-          <span style={{ position: 'absolute', left: '2px', color: '#1d4ed8' }}>&bull;</span>
-        )}
-        {formatted}
-      </div>
+      <p key={index} className={isItalic ? 'astrax-ai-response-note' : 'astrax-ai-response-paragraph'}>
+        {renderInlineContent(trimmed)}
+      </p>
     );
   });
-};
 
-export const AIAssistant: React.FC = () => {
-  const [open, setOpen] = useState<boolean>(false);
+export const AIAssistant: React.FC<AIAssistantProps> = ({ mode, onModeChange }) => {
   const [input, setInput] = useState<string>('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -98,25 +114,29 @@ export const AIAssistant: React.FC = () => {
   };
 
   const showSuggestions = messages.length === 0 && !loading;
+  const open = mode !== 'closed';
+  const isFloating = mode === 'floating';
 
   return (
     <>
-      {/* Floating action button */}
-      {!open && (
+      {mode === 'closed' && (
         <button
-          onClick={() => setOpen(true)}
-          title="Astrax AI — case summaries & pattern analysis"
-          aria-label="Open Astrax AI assistant"
-          className="astrax-ai-launcher"
+          type="button"
+          className="astrax-ai-floating-launcher"
+          onClick={() => onModeChange('floating')}
+          aria-label="Open AstraX AI in a floating window"
+          title="Ask AstraX AI"
         >
-          <Sparkles size={22} />
-          <span className="astrax-ai-launcher-label">Ask Astrax AI</span>
+          <Bot size={21} />
+          <Sparkles size={12} className="astrax-ai-floating-sparkle" />
         </button>
       )}
-
       {/* Chat drawer */}
       {open && (
-        <section className="astrax-ai-panel" aria-label="Astrax AI assistant">
+        <section
+          className={`astrax-ai-panel${isFloating ? ' astrax-ai-panel-floating' : ''}`}
+          aria-label={isFloating ? 'AstraX AI floating assistant' : 'Astrax AI assistant'}
+        >
           {/* Header */}
           <div className="astrax-ai-header">
             <div className="astrax-ai-brand">
@@ -126,8 +146,12 @@ export const AIAssistant: React.FC = () => {
               </div>
               <div className="astrax-ai-brand-copy">
                 <div className="astrax-ai-name">Astrax AI</div>
-                <div className="astrax-ai-presence"><span /> Evidence &amp; case intelligence</div>
+                <div className="astrax-ai-presence"><span /> Secure evidence &amp; case intelligence</div>
               </div>
+            </div>
+            <div className="astrax-ai-header-status">
+              <ShieldCheck size={14} />
+              <span>AUTHORIZED WORKSPACE</span>
             </div>
             <div className="astrax-ai-header-actions">
               {messages.length > 0 && (
@@ -144,7 +168,7 @@ export const AIAssistant: React.FC = () => {
                 </button>
               )}
               <button
-                onClick={() => setOpen(false)}
+                onClick={() => onModeChange('closed')}
                 title="Close assistant"
                 aria-label="Close assistant"
                 className="astrax-ai-icon-button"
@@ -158,18 +182,22 @@ export const AIAssistant: React.FC = () => {
           <div ref={bodyRef} className="astrax-ai-messages" aria-live="polite">
             {showSuggestions && (
               <div className="astrax-ai-welcome">
-                <div className="astrax-ai-welcome-mark"><Sparkles size={21} /></div>
-                <div className="astrax-ai-eyebrow">YOUR SECURE WORKSPACE ASSISTANT</div>
-                <h2>How can I help?</h2>
-                <p>Explore authorized case records, summarize activity, or ask a general question.</p>
-                <div className="astrax-ai-suggestions-heading">TRY ASKING</div>
+                <div className="astrax-ai-welcome-mark"><Sparkles size={25} /></div>
+                <div className="astrax-ai-eyebrow">YOUR CASE INTELLIGENCE ASSISTANT</div>
+                <h2>What would you like to investigate?</h2>
+                <p>Ask a question about authorized records, explore patterns, or get a clear case summary.</p>
+                <div className="astrax-ai-suggestions-heading">
+                  <span>GET STARTED</span>
+                  <span>Choose a prompt or type your own</span>
+                </div>
                 <div className="astrax-ai-suggestions">
-                  {SUGGESTIONS.map((suggestion) => (
+                  {SUGGESTIONS.map((suggestion, index) => (
                     <button
                       key={suggestion}
                       onClick={() => send(suggestion)}
                       className="astrax-ai-suggestion"
                     >
+                      <span className="astrax-ai-suggestion-index">0{index + 1}</span>
                       <span>{suggestion}</span>
                       <ArrowUpRight size={15} />
                     </button>
@@ -216,6 +244,7 @@ export const AIAssistant: React.FC = () => {
 
           {/* Input */}
           <div className="astrax-ai-composer-area">
+            <div className="astrax-ai-composer-inner">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -227,7 +256,7 @@ export const AIAssistant: React.FC = () => {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask about a case, document, or more..."
+                placeholder="Ask AstraX about a case, document, evidence, or legal term..."
                 aria-label="Message Astrax AI"
               />
               <button
@@ -241,7 +270,8 @@ export const AIAssistant: React.FC = () => {
             </form>
             <div className="astrax-ai-composer-note">
               <ShieldCheck size={12} />
-              AI responses can be inaccurate. Verify important information.
+              <span>AI responses may be inaccurate. Verify important information before use.</span>
+            </div>
             </div>
           </div>
         </section>
