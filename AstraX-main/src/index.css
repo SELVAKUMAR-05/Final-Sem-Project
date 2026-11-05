@@ -2080,3 +2080,80 @@ body {
     word-break: break-all !important;
   }
 }
+
+@media (max-width: 760px) {
+  .app-shell,
+  .app-shell > div:has(> .app-sidebar),
+  .app-main {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-main {
+    flex: 1 1 0%;
+  }
+
+  .app-main > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .app-main [style*="grid-template-columns"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-main [style*="justify-content: space-between"] {
+    flex-wrap: wrap;
+  }
+
+  .app-main :is(input, select, textarea) {
+    max-width: 100%;
+  }
+
+  .app-main :is(pre, code, [class*="hash"]) {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-topbar {
+    gap: 8px !important;
+  }
+
+  .app-brand-toggle {
+    gap: 8px !important;
+  }
+
+  .app-brand-link {
+    gap: 8px !important;
+  }
+
+  .app-global-search {
+    display: block !important;
+    order: 3;
+    flex: 1 0 100%;
+    width: 100% !important;
+  }
+
+  .app-main {
+    padding: 14px 12px !important;
+  }
+
+  .app-main [style*="grid-template-columns"] {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .app-main [style*="justify-content: space-between"] {
+    align-items: flex-start;
+  }
+
+  .app-main h1 {
+    font-size: clamp(20px, 6vw, 24px) !important;
+    overflow-wrap: anywhere;
+  }
+
+  .app-main :is(.gov-card-body, .gov-card-header) {
+    padding: 14px;
+  }
+}
